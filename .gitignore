@@ -1,0 +1,6 @@
+/local
+
+/cmd/symlink/symlink
+/cmd/vfs/vfs
+.idea
+.sw[pq]

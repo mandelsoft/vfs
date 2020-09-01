@@ -1,0 +1,2 @@
+# github.com/mandelsoft/filepath v0.0.0-20200901163143-eceff1ab880a
+github.com/mandelsoft/filepath/pkg/filepath
