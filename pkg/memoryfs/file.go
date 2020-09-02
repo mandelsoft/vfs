@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package memory
+package memoryfs
 
 import (
 	"bytes"

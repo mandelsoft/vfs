@@ -62,9 +62,12 @@ func isAbs(path string) bool {
 	return strings.HasPrefix(path, vfs.PathSeparatorString)
 }
 
-// on a file outside the base projection it returns the given file name and an error,
-// else the given file with the base projection prepended
-func (m *MappedFileSystem) mapPath(path string) (vfs.FileSystem, string, string, error) {
+func (m *MappedFileSystem) mapPath(path string, link ...bool) (vfs.FileSystem, string, string, error) {
+	getlink := true
+	if len(link) > 0 {
+		getlink = link[0]
+	}
+
 	r := vfs.PathSeparatorString
 	fs, l := m.mapper.MapPath(r)
 	links := 0
@@ -101,7 +104,7 @@ func (m *MappedFileSystem) mapPath(path string) (vfs.FileSystem, string, string,
 			if err != nil && !os.IsPermission(err) {
 				return nil, "", "", err
 			}
-			if fi.Mode()&os.ModeSymlink != 0 {
+			if fi.Mode()&os.ModeSymlink != 0 && (getlink || strings.Contains(path, vfs.PathSeparatorString)) {
 				links++
 				if links > 255 {
 					return nil, "", "", errors.New("AbsPath: too many links")
@@ -157,7 +160,7 @@ func (m *MappedFileSystem) Stat(name string) (fi os.FileInfo, err error) {
 }
 
 func (m *MappedFileSystem) Rename(oldname, newname string) (err error) {
-	oldfs, o, _, err := m.mapPath(oldname)
+	oldfs, o, _, err := m.mapPath(oldname, false)
 	if err != nil {
 		return &os.PathError{Op: "rename", Path: oldname, Err: err}
 	}
@@ -172,7 +175,7 @@ func (m *MappedFileSystem) Rename(oldname, newname string) (err error) {
 }
 
 func (m *MappedFileSystem) RemoveAll(name string) (err error) {
-	fs, l, _, err := m.mapPath(name)
+	fs, l, _, err := m.mapPath(name, false)
 	if err != nil {
 		return &os.PathError{Op: "remove_all", Path: name, Err: err}
 	}
@@ -180,7 +183,7 @@ func (m *MappedFileSystem) RemoveAll(name string) (err error) {
 }
 
 func (m *MappedFileSystem) Remove(name string) (err error) {
-	fs, l, _, err := m.mapPath(name)
+	fs, l, _, err := m.mapPath(name, false)
 	if err != nil {
 		return &os.PathError{Op: "remove", Path: name, Err: err}
 	}
@@ -262,7 +265,7 @@ func (m *MappedFileSystem) Create(name string) (f vfs.File, err error) {
 }
 
 func (m *MappedFileSystem) Lstat(name string) (os.FileInfo, error) {
-	fs, l, _, err := m.mapPath(name)
+	fs, l, _, err := m.mapPath(name, false)
 	if err != nil {
 		return nil, &os.PathError{Op: "lstat", Path: name, Err: err}
 	}
@@ -278,7 +281,7 @@ func (m *MappedFileSystem) Symlink(oldname, newname string) error {
 }
 
 func (m *MappedFileSystem) Readlink(name string) (string, error) {
-	fs, l, _, err := m.mapPath(name)
+	fs, l, _, err := m.mapPath(name, false)
 	if err != nil {
 		return "", &os.PathError{Op: "readlink", Path: name, Err: err}
 	}

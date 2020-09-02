@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package projection
+package projectionfs
 
 import (
 	"fmt"

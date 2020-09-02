@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package os
+package osfs
 
 import (
 	"os"

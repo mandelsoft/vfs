@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package memory
+package projectionfs
 
 import (
 	. "github.com/onsi/ginkgo"

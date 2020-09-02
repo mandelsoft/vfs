@@ -53,7 +53,7 @@ type FileSystem interface {
 	Open(name string) (File, error)
 
 	// OpenFile opens a file using the given flags and the given mode.
-	OpenFile(name string, flag int, perm os.FileMode) (File, error)
+	OpenFile(name string, flags int, perm os.FileMode) (File, error)
 
 	// Remove removes a file identified by name, returning an error, if any
 	// happens.

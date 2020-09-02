@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package memory
+package memoryfs
 
 import (
 	"errors"
@@ -121,7 +121,9 @@ var _ = Describe("memory filesystem", func() {
 
 		It("creates link", func() {
 			Expect(fs.Symlink("/d1/d1n1", "d2/link")).To(Succeed())
+			ExpectFolders(fs, "d2", []string{"d2n1", "d2n2", "link"}, nil)
 			Expect(fs.Readlink("/d2/link")).To(Equal("/d1/d1n1"))
+			ExpectFolders(fs, "d2/link", []string{"d1n1a"}, nil)
 		})
 
 		It("lstat link", func() {
@@ -136,6 +138,20 @@ var _ = Describe("memory filesystem", func() {
 			fi, err := fs.Stat("d2/link")
 			Expect(err).To(Succeed())
 			Expect(fi.Mode() & os.ModeType).To(Equal(os.ModeDir))
+		})
+
+		It("remove link", func() {
+			Expect(fs.Symlink("/d1/d1n1", "d2/link")).To(Succeed())
+			Expect(fs.Remove("d2/link")).To(Succeed())
+			ExpectFolders(fs, "d1", []string{"d1n1", "d1n2"}, nil)
+			ExpectFolders(fs, "d2", []string{"d2n1", "d2n2"}, nil)
+		})
+
+		It("rename link", func() {
+			Expect(fs.Symlink("/d1/d1n1", "d2/link")).To(Succeed())
+			Expect(fs.Rename("d2/link", "d2/new")).To(Succeed())
+			ExpectFolders(fs, "d2", []string{"d2n1", "d2n2", "new"}, nil)
+			ExpectFolders(fs, "d2/new", []string{"d1n1a"}, nil)
 		})
 
 		Context("eval", func() {

@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package projection
+package readonlyfs
 
 import (
 	"os"
@@ -24,51 +24,38 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/mandelsoft/vfs/pkg/memory"
+	"github.com/mandelsoft/vfs/pkg/memoryfs"
 	. "github.com/mandelsoft/vfs/pkg/test"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
-var _ = Describe("projection filesystem", func() {
+var _ = Describe("readonly filesystem", func() {
 	var fs vfs.FileSystem
 	var mem vfs.FileSystem
 
 	BeforeEach(func() {
 		var err error
 
-		mem = memory.New()
+		mem = memoryfs.New()
 
 		mem.MkdirAll("d1/d1d1/d1d1d1/a", os.ModePerm)
 		mem.MkdirAll("d1/d1d1/d1d1d2/b", os.ModePerm)
 		mem.MkdirAll("d2/d2d1", os.ModePerm)
-		fs, err = New(mem, "d1")
+		fs = New(mem)
 		Expect(err).To(Succeed())
 	})
 
 	Context("plain", func() {
-
 		It("root", func() {
-			ExpectFolders(fs, "/", []string{"d1d1"}, nil)
-			ExpectFolders(fs, "/d1d1", []string{"d1d1d1", "d1d1d2"}, nil)
+			ExpectFolders(fs, "/d1", []string{"d1d1"}, nil)
+			ExpectFolders(fs, "/d1/d1d1", []string{"d1d1d1", "d1d1d2"}, nil)
 		})
 
-		It("visibility", func() {
-			ExpectFolders(fs, "..", []string{"d1d1"}, nil)
-			ExpectFolders(fs, "d1d1/..", []string{"d1d1"}, nil)
-			ExpectFolders(fs, "d1d1/../..", []string{"d1d1"}, nil)
-		})
-
-		It("abolute symlink", func() {
-			fs.Symlink("/d1d1/d1d1d1", "d1d1/link")
-			ExpectFolders(fs, "d1d1/link", []string{"a"}, nil)
-		})
-		It("relative symlink", func() {
-			fs.Symlink("./d1d1d1", "d1d1/link")
-			ExpectFolders(fs, "d1d1/link", []string{"a"}, nil)
-		})
-		It("symlink visibility", func() {
-			fs.Symlink("../../..", "d1d1/link")
-			ExpectFolders(fs, "d1d1/link", []string{"d1d1"}, nil)
+		It("mod", func() {
+			Expect(fs.Mkdir("/d1/test", os.ModePerm)).To(Equal(ErrReadonly))
+			ExpectFolders(fs, "/d1", []string{"d1d1"}, nil)
+			Expect(mem.Mkdir("/d1/test", os.ModePerm)).To(Succeed())
+			ExpectFolders(fs, "/d1", []string{"d1d1", "test"}, nil)
 		})
 	})
 })

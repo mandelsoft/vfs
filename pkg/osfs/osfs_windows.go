@@ -16,8 +16,20 @@
  *  limitations under the License.
  */
 
-package os
+package osfs
 
-func mapPath(path string) string {
-	return path
+import (
+	"os"
+)
+
+func mapPath(p string) string {
+	mapped := ""
+	for c := range path {
+		if os.IsPathSeparator(c) {
+			mapped = mapped + pkg.PathSeparatorChar
+		} else {
+			mapped = mapped + c
+		}
+	}
+	return mapped
 }

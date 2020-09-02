@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mandelsoft/vfs/pkg/compose"
-	"github.com/mandelsoft/vfs/pkg/cwd"
-	"github.com/mandelsoft/vfs/pkg/memory"
-	osfs "github.com/mandelsoft/vfs/pkg/os"
-	"github.com/mandelsoft/vfs/pkg/projection"
+	"github.com/mandelsoft/vfs/pkg/composefs"
+	"github.com/mandelsoft/vfs/pkg/cwdfs"
+	"github.com/mandelsoft/vfs/pkg/memoryfs"
+	osfs "github.com/mandelsoft/vfs/pkg/osfs"
+	"github.com/mandelsoft/vfs/pkg/projectionfs"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
@@ -62,26 +62,26 @@ func main() {
 
 	list(fs, cur)
 
-	me, err := projection.New(fs, cur)
+	me, err := projectionfs.New(fs, cur)
 	Assert(err)
 	list(me, "/")
 
-	cwdfs, err := cwd.New(fs, cur)
+	cwdfs, err := cwdfs.New(fs, cur)
 	Assert(err)
 	list(cwdfs, "test")
 
-	wdfs, err := projection.New(cwdfs, "test")
+	wdfs, err := projectionfs.New(cwdfs, "test")
 	Assert(err)
 	list(wdfs, ".")
 	list(wdfs, "sub")
 
-	cfs := compose.New(wdfs)
+	cfs := composefs.New(wdfs)
 	err = cfs.Mount("sub/m", me)
 	Assert(err)
 	list(cfs, "sub/m/pkg")
 	list(cfs, "sub/m/pkg/../..")
 
-	mem := memory.New()
+	mem := memoryfs.New()
 	err = mem.Mkdir("test", os.ModePerm)
 	Assert(err)
 	list(mem, ".")

@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package memory
+package memoryfs
 
 import (
 	"errors"
@@ -212,7 +212,7 @@ func (m *MemoryFileSystem) OpenFile(name string, flags int, perm os.FileMode) (v
 }
 
 func (m *MemoryFileSystem) Remove(name string) error {
-	dir, _, f, n, err := m.createInfo(name)
+	dir, _, f, n, err := m.createInfo(name, false)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (m *MemoryFileSystem) Remove(name string) error {
 }
 
 func (m *MemoryFileSystem) RemoveAll(name string) error {
-	dir, _, _, n, err := m.createInfo(name)
+	dir, _, _, n, err := m.createInfo(name, false)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func (m *MemoryFileSystem) RemoveAll(name string) error {
 }
 
 func (m *MemoryFileSystem) Rename(oldname, newname string) error {
-	odir, _, fo, o, err := m.createInfo(oldname)
+	odir, _, fo, o, err := m.createInfo(oldname, false)
 	if err != nil {
 		return err
 	}

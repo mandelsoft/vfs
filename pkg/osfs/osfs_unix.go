@@ -16,16 +16,8 @@
  *  limitations under the License.
  */
 
-package projection
+package osfs
 
-import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"testing"
-)
-
-func TestNodes(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Memory Suite")
+func mapPath(path string) string {
+	return path
 }
