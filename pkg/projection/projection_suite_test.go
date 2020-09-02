@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package memory
+package projection
 
 import (
 	. "github.com/onsi/ginkgo"

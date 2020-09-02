@@ -86,8 +86,9 @@ var _ = Describe("memory filesystem", func() {
 
 	Context("dots", func() {
 		It("dot", func() {
-			Expect(fs.Mkdir("d1", os.ModePerm)).To(BeNil())
+			Expect(fs.MkdirAll("d1/d2", os.ModePerm)).To(BeNil())
 			ExpectFolders(fs, ".", []string{"d1"}, nil)
+			ExpectFolders(fs, "d1/.", []string{"d2"}, nil)
 		})
 		It("dotdot", func() {
 			Expect(fs.Mkdir("d1", os.ModePerm)).To(BeNil())
