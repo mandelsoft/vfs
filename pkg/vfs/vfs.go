@@ -117,3 +117,81 @@ type File interface {
 	Truncate(size int64) error
 	WriteString(s string) (ret int, err error)
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type VFS struct {
+	FileSystem
+}
+
+func New(fs FileSystem) *VFS {
+	return &VFS{fs}
+}
+
+func (fs *VFS) Join(elems ...string) string {
+	return Join(fs, elems...)
+}
+
+func (fs *VFS) Split(path string) (string, string) {
+	return Split(fs, path)
+}
+
+func (fs *VFS) Base(path string) string {
+	return Base(fs, path)
+}
+
+func (fs *VFS) Dir(path string) string {
+	return Dir(fs, path)
+}
+
+func (fs *VFS) Clean(path string) string {
+	return Clean(fs, path)
+}
+
+func (fs *VFS) Trim(path string) string {
+	return Trim(fs, path)
+}
+
+func (fs *VFS) IsAbs(path string) bool {
+	return IsAbs(fs, path)
+}
+
+func (fs *VFS) IsRoot(path string) bool {
+	return IsRoot(fs, path)
+}
+
+func (fs *VFS) SplitVolume(path string) (string, string) {
+	return SplitVolume(fs, path)
+}
+
+func (fs *VFS) SplitPath(path string) (vol string, elems []string, rooted bool) {
+	return SplitPath(fs, path)
+}
+
+func (fs *VFS) Canonical(path string, exist bool) (string, error) {
+	return Canonical(fs, path, exist)
+}
+
+func (fs *VFS) Abs(path string) (string, error) {
+	return Abs(fs, path)
+}
+
+func (fs *VFS) EvalSymlinks(path string) (string, error) {
+	return EvalSymlinks(fs, path)
+}
+
+func (fs *VFS) Walk(path string, fn WalkFunc) error {
+	return Walk(fs, path, fn)
+}
+
+func (fs *VFS) Exists(path string) (bool, error) {
+	return Exists(fs, path)
+}
+
+func (fs *VFS) DirExists(path string) (bool, error) {
+	return DirExists(fs, path)
+}
+
+func (fs *VFS) IsDir(path string) (bool, error) {
+	return IsDir(fs, path)
+}

@@ -42,12 +42,7 @@ func Join(fs FileSystem, elems ...string) string {
 			elems = append(elems[:i], elems[i+1:]...)
 		}
 	}
-	r := Trim(fs, strings.Join(elems, PathSeparatorString))
-	vol, p := SplitVolume(fs, r)
-	for strings.Index(p, PathSeparatorString+PathSeparatorString) >= 0 {
-		p = strings.ReplaceAll(p, PathSeparatorString+PathSeparatorString, PathSeparatorString)
-	}
-	return vol + p
+	return Trim(fs, strings.Join(elems, PathSeparatorString))
 }
 
 // Clean returns the shortest path name equivalent to path
@@ -129,6 +124,18 @@ func Trim(fs FileSystem, path string) string {
 		i--
 	}
 	p := path[:i+1]
+	i = len(p) - 1
+	for i >= len(vol) {
+		j := i
+		for j >= len(vol) && IsPathSeparator(p[j]) {
+			j--
+		}
+		if i != j {
+			p = p[:j+1] + p[i:]
+			i = j
+		}
+		i--
+	}
 
 	return p
 }
@@ -266,16 +273,6 @@ func walk(fs FileSystem, p string, parent int, exist bool) (string, error) {
 	return filepath.Clean(filepath.Join(append([]string{p}, rest...)...)), nil
 }
 
-func Exists_(err error) bool {
-	return err == nil || !os.IsNotExist(err)
-}
-
-// Exists checks whether a file exists.
-func Exists(fs FileSystem, path string) bool {
-	_, err := fs.Stat(path)
-	return Exists_(err)
-}
-
 // Split splits path immediately following the final Separator,
 // separating it into a directory and file name component.
 // If there is no Separator in path, Split returns an empty dir
@@ -318,4 +315,41 @@ func SplitPath(fs FileSystem, path string) (string, []string, bool) {
 		elems = append(elems, b)
 	}
 	return vol, elems, strings.HasPrefix(path, PathSeparatorString)
+}
+
+func Exists_(err error) bool {
+	return err == nil || !os.IsNotExist(err)
+}
+
+// Exists checks if a file or directory exists.
+func Exists(fs FileSystem, path string) (bool, error) {
+	_, err := fs.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// DirExists checks if a path exists and is a directory.
+func DirExists(fs FileSystem, path string) (bool, error) {
+	fi, err := fs.Stat(path)
+	if err == nil && fi.IsDir() {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// IsDir checks if a given path is a directory.
+func IsDir(fs FileSystem, path string) (bool, error) {
+	fi, err := fs.Stat(path)
+	if err != nil {
+		return false, err
+	}
+	return fi.IsDir(), nil
 }
