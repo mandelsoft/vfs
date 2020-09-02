@@ -281,9 +281,14 @@ func Split2(path string) (dir, file string) {
 // assure the result denotes the same file as the input.
 // On Windows, the result is a UNC path if and only if the first path
 // element is a UNC path.
-func Join(elem ...string) string {
+func Join(elems ...string) string {
 	s := string(os.PathSeparator) + string(os.PathSeparator)
-	r := strings.Join(elem, string(os.PathSeparator))
+	for i := 0; i < len(elems); i++ {
+		if elems[i] == "" {
+			elems = append(elems[:i], elems[i+1:]...)
+		}
+	}
+	r := strings.Join(elems, string(os.PathSeparator))
 	for strings.Index(r, s) >= 0 {
 		r = strings.ReplaceAll(r, s, string(os.PathSeparator))
 	}

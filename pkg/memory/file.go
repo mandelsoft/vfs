@@ -87,9 +87,10 @@ func (f *file) Readdir(count int) (files []os.FileInfo, err error) {
 
 	files = f.fileData.entries.Files()
 	if f.readDirCount >= int64(len(files)) {
-		return nil, io.EOF
+		files = []os.FileInfo{}
+	} else {
+		files = files[f.readDirCount:]
 	}
-	files = files[f.readDirCount:]
 	if count > 0 {
 		if len(files) < count {
 			outLength = int64(len(files))

@@ -84,6 +84,7 @@ func main() {
 	mem := memory.New()
 	err = mem.Mkdir("test", os.ModePerm)
 	Assert(err)
+	list(mem, ".")
 	err = mem.MkdirAll("a/b/c", os.ModePerm)
 	Assert(err)
 	list(mem, "/")

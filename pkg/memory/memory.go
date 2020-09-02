@@ -20,7 +20,6 @@ package memory
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -52,56 +51,101 @@ func (*MemoryFileSystem) Getwd() (string, error) {
 	return vfs.PathSeparatorString, nil
 }
 
-func (m *MemoryFileSystem) findFile(name string) (*fileData, string, error) {
-	dir, _, n, err := m.createInfo(name)
+func (m *MemoryFileSystem) findFile(name string, link ...bool) (*fileData, string, error) {
+	_, _, f, n, err := m.createInfo(name, link...)
 	if err != nil {
 		return nil, n, err
 	}
-	if n == "" {
-		return dir, n, nil
+	if f == nil {
+		err = os.ErrNotExist
 	}
-	f, err := dir.Get(n)
 	return f, n, err
 }
 
-func (m *MemoryFileSystem) createInfo(name string) (*fileData, string, string, error) {
-	var err error
-	d, n := vfs.Split(m, name)
-	if n == ".." || n == "." {
-		return nil, d, n, &os.PathError{Op: "create", Path: name, Err: errors.New("invalid file name")}
+func (m *MemoryFileSystem) createInfo(name string, link ...bool) (*fileData, string, *fileData, string, error) {
+	var data []*fileData
+	var path string
+
+	_, elems, _ := vfs.SplitPath(m, name)
+	getlink := true
+	if len(link) > 0 {
+		getlink = link[0]
 	}
-	parent := m.root
-	if d != "" {
-		d, err = vfs.Canonical(m, d, true)
-		if err != nil {
-			return nil, d, n, err
-		}
-		_, elems, _ := vfs.SplitPath(m, d)
-		for _, e := range elems {
-			parent, err = parent.Get(e)
-			if err != nil {
-				return nil, d, n, err
+outer:
+	for {
+		path = "/"
+		data = []*fileData{m.root}
+
+		for i := 0; i < len(elems); i++ {
+			e := elems[i]
+			cur := len(data) - 1
+			switch e {
+			case ".":
+				continue
+			case "..":
+				if len(data) > 1 {
+					data = data[:cur]
+					path, _ = vfs.Split(m, path)
+				}
+				continue
 			}
+			next, err := data[cur].Get(e)
+			switch err {
+			case ErrNoDir:
+				return nil, "", nil, "", &os.PathError{Op: "", Path: path, Err: err}
+			case os.ErrNotExist:
+				if i == len(elems)-1 {
+					return data[cur], path, nil, e, nil
+				}
+				return nil, "", nil, "", &os.PathError{Op: "", Path: vfs.Join(m, path, e), Err: err}
+			}
+			if !next.IsSymlink() || (!getlink && i == len(elems)-1) {
+				path = vfs.Join(m, path, e)
+				data = append(data, next)
+				continue
+			}
+			l := next.GetSymlink()
+			_, nested, rooted := vfs.SplitPath(m, l)
+			if rooted {
+				elems = append(nested, elems[i+1:]...)
+				i = 0
+				continue outer
+			}
+			elems = append(append(elems[:i], nested...), elems[i+1:]...)
+			i--
 		}
+		break
 	}
-	return parent, d, n, nil
+	if path == vfs.PathSeparatorString {
+		return m.root, path, m.root, "", nil
+	}
+	d, b := vfs.Split(m, path)
+	if d == "" {
+		return m.root, vfs.PathSeparatorString, data[len(data)-1], b, nil
+	}
+	return data[len(data)-2], d, data[len(data)-1], b, nil
 }
 
 func (m *MemoryFileSystem) Create(name string) (vfs.File, error) {
-	parent, _, n, err := m.createInfo(name)
+	parent, _, f, n, err := m.createInfo(name)
 	if err != nil {
 		return nil, err
+	}
+	if f != nil {
+		return nil, os.ErrExist
 	}
 	return parent.AddH(n, createFile(os.ModePerm))
 }
 
 func (m *MemoryFileSystem) Mkdir(name string, perm os.FileMode) error {
-	parent, _, n, err := m.createInfo(name)
+	parent, _, f, n, err := m.createInfo(name)
 	if err != nil {
 		return err
 	}
-	err = parent.Add(n, createDir(perm))
-	return err
+	if f != nil {
+		return os.ErrExist
+	}
+	return parent.Add(n, createDir(perm))
 }
 
 func (m *MemoryFileSystem) MkdirAll(path string, perm os.FileMode) error {
@@ -134,12 +178,8 @@ func (m *MemoryFileSystem) Open(name string) (vfs.File, error) {
 }
 
 func (m *MemoryFileSystem) OpenFile(name string, flags int, perm os.FileMode) (vfs.File, error) {
-	dir, _, n, err := m.createInfo(name)
+	dir, _, f, n, err := m.createInfo(name)
 	if err != nil {
-		return nil, err
-	}
-	f, err := dir.Get(n)
-	if err != nil && err != os.ErrNotExist {
 		return nil, err
 	}
 	if f == nil {
@@ -172,49 +212,58 @@ func (m *MemoryFileSystem) OpenFile(name string, flags int, perm os.FileMode) (v
 }
 
 func (m *MemoryFileSystem) Remove(name string) error {
-	dir, _, n, err := m.createInfo(name)
+	dir, _, f, n, err := m.createInfo(name)
 	if err != nil {
 		return err
 	}
 
-	e, err := dir.Get(n)
-	if err != nil {
-		return err
+	if f == nil {
+		return os.ErrNotExist
 	}
-	if e.IsDir() {
-		e.Lock()
-		defer e.Unlock()
-
-		if len(e.entries) > 0 {
+	f.Lock()
+	defer f.Unlock()
+	if f.IsDir() {
+		if len(f.entries) > 0 {
 			return &os.PathError{Op: "remove", Path: name, Err: ErrNotEmpty}
 		}
+	}
+	if n == "" {
+		return errors.New("cannot delete root dir")
 	}
 	return dir.Del(n)
 }
 
 func (m *MemoryFileSystem) RemoveAll(name string) error {
-	dir, _, n, err := m.createInfo(name)
+	dir, _, _, n, err := m.createInfo(name)
 	if err != nil {
 		return err
+	}
+	if n == "" {
+		return errors.New("cannot delete root dir")
 	}
 	return dir.Del(n)
 }
 
 func (m *MemoryFileSystem) Rename(oldname, newname string) error {
-	odir, _, o, err := m.createInfo(oldname)
+	odir, _, fo, o, err := m.createInfo(oldname)
 	if err != nil {
 		return err
 	}
-	ndir, _, n, err := m.createInfo(newname)
+	if o == "" {
+		return errors.New("cannot rename root dir")
+	}
+	ndir, _, fn, n, err := m.createInfo(newname)
 	if err != nil {
 		return err
 	}
-	f, err := odir.Get(o)
-	if err != nil {
-		return err
+	if fo == nil {
+		return os.ErrNotExist
+	}
+	if fn != nil {
+		return os.ErrExist
 	}
 
-	err = ndir.Add(n, f)
+	err = ndir.Add(n, fo)
 	if err == nil {
 		odir.Del(o)
 	}
@@ -222,7 +271,7 @@ func (m *MemoryFileSystem) Rename(oldname, newname string) error {
 }
 
 func (m *MemoryFileSystem) Lstat(name string) (os.FileInfo, error) {
-	f, n, err := m.findFile(name)
+	f, n, err := m.findFile(name, false)
 	if err != nil {
 		return nil, err
 	}
@@ -230,31 +279,14 @@ func (m *MemoryFileSystem) Lstat(name string) (os.FileInfo, error) {
 }
 
 func (m *MemoryFileSystem) Stat(name string) (os.FileInfo, error) {
-	links := 0
-	for {
-		dir, d, n, err := m.createInfo(name)
-		if err != nil {
-			return nil, err
-		}
-		f, err := dir.Get(n)
-		if err != nil {
-			return nil, err
-		}
-		if f.IsSymlink() {
-			p := f.GetSymlink()
-			if vfs.IsAbs(m, p) {
-				name = p
-			} else {
-				name = vfs.Join(m, d, p)
-			}
-			links++
-			if links > 255 {
-				return nil, &os.PathError{Op: "stat", Path: name, Err: fmt.Errorf("too many links")}
-			}
-		} else {
-			return newFileInfo(n, f), nil
-		}
+	f, n, err := m.findFile(name)
+	if err != nil {
+		return nil, err
 	}
+	if f == nil {
+		return nil, os.ErrNotExist
+	}
+	return newFileInfo(n, f), nil
 }
 
 func (m *MemoryFileSystem) Chmod(name string, mode os.FileMode) error {
@@ -276,7 +308,7 @@ func (m *MemoryFileSystem) Chtimes(name string, atime time.Time, mtime time.Time
 }
 
 func (m *MemoryFileSystem) Symlink(oldname, newname string) error {
-	parent, _, n, err := m.createInfo(newname)
+	parent, _, _, n, err := m.createInfo(newname)
 	if err != nil {
 		return err
 	}
@@ -284,7 +316,7 @@ func (m *MemoryFileSystem) Symlink(oldname, newname string) error {
 }
 
 func (m *MemoryFileSystem) Readlink(name string) (string, error) {
-	f, _, err := m.findFile(name)
+	f, _, err := m.findFile(name, false)
 	if err != nil {
 		return "", err
 	}

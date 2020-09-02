@@ -35,10 +35,14 @@ func IsPathSeparator(c uint8) bool {
 // Join joins any number of path elements into a single path, adding
 // a Separator if necessary. Join never calls Clean on the result to
 // assure the result denotes the same file as the input.
-// On Windows, the result is a UNC path if and only if the first path
-// element is a UNC path.
-func Join(fs FileSystem, elem ...string) string {
-	r := Trim(fs, strings.Join(elem, PathSeparatorString))
+// Empty entries will be ignored.
+func Join(fs FileSystem, elems ...string) string {
+	for i := 0; i < len(elems); i++ {
+		if elems[i] == "" {
+			elems = append(elems[:i], elems[i+1:]...)
+		}
+	}
+	r := Trim(fs, strings.Join(elems, PathSeparatorString))
 	vol, p := SplitVolume(fs, r)
 	for strings.Index(p, PathSeparatorString+PathSeparatorString) >= 0 {
 		p = strings.ReplaceAll(p, PathSeparatorString+PathSeparatorString, PathSeparatorString)
@@ -295,18 +299,19 @@ func Split(fs FileSystem, path string) (dir, file string) {
 // SplitPath splits a path into a volume and an array of the path segments
 func SplitPath(fs FileSystem, path string) (string, []string, bool) {
 	vol, path := SplitVolume(fs, path)
+	rest := path
 	elems := []string{}
-	for path != "" {
+	for rest != "" {
 		i := 0
-		for i < len(path) && IsPathSeparator(path[i]) {
+		for i < len(rest) && IsPathSeparator(rest[i]) {
 			i++
 		}
 		j := i
-		for j < len(path) && !IsPathSeparator(path[j]) {
+		for j < len(rest) && !IsPathSeparator(rest[j]) {
 			j++
 		}
-		b := path[i:j]
-		path = path[j:]
+		b := rest[i:j]
+		rest = rest[j:]
 		if b == "." || b == "" {
 			continue
 		}

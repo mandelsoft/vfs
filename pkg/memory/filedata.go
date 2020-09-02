@@ -43,7 +43,7 @@ func (f *fileData) IsFile() bool {
 }
 
 func (f *fileData) IsSymlink() bool {
-	return f.mode&os.ModeType == os.ModeSymlink
+	return (f.mode & os.ModeType) == os.ModeSymlink
 }
 
 func createFile(perm os.FileMode) *fileData {
@@ -101,6 +101,9 @@ func (f *fileData) Add(name string, s *fileData) error {
 	defer f.Unlock()
 	if !f.IsDir() {
 		return ErrNoDir
+	}
+	if _, ok := f.entries[name]; ok {
+		return os.ErrExist
 	}
 	f.entries.Add(name, s)
 	f.setModTime(time.Now())
