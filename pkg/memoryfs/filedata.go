@@ -100,7 +100,7 @@ func (f *fileData) Add(name string, s *fileData) error {
 	f.Lock()
 	defer f.Unlock()
 	if !f.IsDir() {
-		return ErrNoDir
+		return ErrNotDir
 	}
 	if _, ok := f.entries[name]; ok {
 		return os.ErrExist
@@ -114,7 +114,7 @@ func (f *fileData) Get(name string) (*fileData, error) {
 	f.Lock()
 	defer f.Unlock()
 	if !f.IsDir() {
-		return nil, ErrNoDir
+		return nil, ErrNotDir
 	}
 	e, ok := f.entries[name]
 	if ok {
@@ -127,7 +127,7 @@ func (f *fileData) Del(name string) error {
 	f.Lock()
 	defer f.Unlock()
 	if !f.IsDir() {
-		return ErrNoDir
+		return ErrNotDir
 	}
 	_, ok := f.entries[name]
 	if !ok {

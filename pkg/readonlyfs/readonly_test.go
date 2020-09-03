@@ -52,7 +52,7 @@ var _ = Describe("readonly filesystem", func() {
 		})
 
 		It("mod", func() {
-			Expect(fs.Mkdir("/d1/test", os.ModePerm)).To(Equal(ErrReadonly))
+			Expect(fs.Mkdir("/d1/test", os.ModePerm)).To(Equal(ErrReadOnly))
 			ExpectFolders(fs, "/d1", []string{"d1d1"}, nil)
 			Expect(mem.Mkdir("/d1/test", os.ModePerm)).To(Succeed())
 			ExpectFolders(fs, "/d1", []string{"d1d1", "test"}, nil)

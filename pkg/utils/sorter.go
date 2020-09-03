@@ -16,31 +16,14 @@
  *  limitations under the License.
  */
 
-package memoryfs
+package utils
 
 import (
 	"os"
-	"sort"
-
-	"github.com/mandelsoft/vfs/pkg/utils"
 )
 
-type DirectoryEntries map[string]*fileData
+type FilesSorter []os.FileInfo
 
-func (m DirectoryEntries) Len() int                     { return len(m) }
-func (m DirectoryEntries) Add(name string, f *fileData) { m[name] = f }
-func (m DirectoryEntries) Remove(name string)           { delete(m, name) }
-func (m DirectoryEntries) Files() (files []os.FileInfo) {
-	for n, f := range m {
-		files = append(files, newFileInfo(n, f))
-	}
-	sort.Sort(utils.FilesSorter(files))
-	return files
-}
-
-func (m DirectoryEntries) Names() (names []string) {
-	for x := range m {
-		names = append(names, x)
-	}
-	return names
-}
+func (s FilesSorter) Len() int           { return len(s) }
+func (s FilesSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s FilesSorter) Less(i, j int) bool { return s[i].Name() < s[j].Name() }

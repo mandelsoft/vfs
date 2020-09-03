@@ -16,31 +16,12 @@
  *  limitations under the License.
  */
 
-package memoryfs
+package vfs
 
 import (
-	"os"
-	"sort"
-
-	"github.com/mandelsoft/vfs/pkg/utils"
+	"syscall"
 )
 
-type DirectoryEntries map[string]*fileData
-
-func (m DirectoryEntries) Len() int                     { return len(m) }
-func (m DirectoryEntries) Add(name string, f *fileData) { m[name] = f }
-func (m DirectoryEntries) Remove(name string)           { delete(m, name) }
-func (m DirectoryEntries) Files() (files []os.FileInfo) {
-	for n, f := range m {
-		files = append(files, newFileInfo(n, f))
-	}
-	sort.Sort(utils.FilesSorter(files))
-	return files
-}
-
-func (m DirectoryEntries) Names() (names []string) {
-	for x := range m {
-		names = append(names, x)
-	}
-	return names
+func isUnderlyingErrNotDir(err error) bool {
+	return err == syscall.ENOTDIR
 }

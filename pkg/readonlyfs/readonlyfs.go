@@ -19,7 +19,6 @@
 package readonlyfs
 
 import (
-	"errors"
 	"os"
 	"time"
 
@@ -37,46 +36,46 @@ func New(fs vfs.FileSystem) vfs.FileSystem {
 }
 
 func (r *readonlyFileSystem) Mkdir(path string, perm os.FileMode) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
 func (r *readonlyFileSystem) MkdirAll(path string, perm os.FileMode) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
 func (r *readonlyFileSystem) Create(path string) (vfs.File, error) {
-	return nil, ErrReadonly
+	return nil, ErrReadOnly
 }
 
 func (r *readonlyFileSystem) OpenFile(path string, flags int, perm os.FileMode) (vfs.File, error) {
 	if flags&(os.O_WRONLY|os.O_CREATE|os.O_RDWR) != 0 {
-		return nil, ErrReadonly
+		return nil, ErrReadOnly
 	}
 	return r.FileSystem.OpenFile(path, flags, perm)
 }
 
 func (r *readonlyFileSystem) Symlink(oldname, newname string) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
 func (r *readonlyFileSystem) Rename(oldname, newname string) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
 func (r *readonlyFileSystem) Remove(path string) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
 func (r *readonlyFileSystem) RemoveAll(path string) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
 func (r *readonlyFileSystem) Chmod(path string, perm os.FileMode) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
 func (r *readonlyFileSystem) Chtimes(path string, atime time.Time, mtime time.Time) error {
-	return ErrReadonly
+	return ErrReadOnly
 }
 
-var ErrReadonly = errors.New("readonly filesystem")
+var ErrReadOnly = vfs.ErrReadOnly

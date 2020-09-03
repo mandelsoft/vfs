@@ -78,7 +78,7 @@ func (f *file) Sync() error {
 
 func (f *file) Readdir(count int) (files []os.FileInfo, err error) {
 	if !f.fileData.IsDir() {
-		return nil, &os.PathError{Op: "readdir", Path: f.name, Err: ErrNoDir}
+		return nil, &os.PathError{Op: "readdir", Path: f.name, Err: ErrNotDir}
 	}
 	var outLength int64
 
@@ -230,10 +230,11 @@ func (f *file) WriteString(s string) (ret int, err error) {
 }
 
 var (
-	ErrNoDir      = errors.New("file is no dir")
-	ErrReadOnly   = errors.New("filehandle is not writable")
+	ErrNotDir   = vfs.ErrNotDir
+	ErrReadOnly = vfs.ErrReadOnly
+
 	ErrFileClosed = errors.New("file is closed")
 	ErrOutOfRange = errors.New("out of range")
 	ErrTooLarge   = errors.New("too large")
-	ErrNotEmpty   = errors.New("dir not empty")
+	ErrNotEmpty   = vfs.ErrNotEmpty
 )

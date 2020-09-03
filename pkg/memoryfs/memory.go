@@ -24,31 +24,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mandelsoft/vfs/pkg/utils"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
 type MemoryFileSystem struct {
+	utils.FileSystemBase
 	root *fileData
 }
 
 func New() vfs.FileSystem {
-	return &MemoryFileSystem{createDir(os.ModePerm)}
+	return &MemoryFileSystem{root: createDir(os.ModePerm)}
 }
 
 func (MemoryFileSystem) Name() string {
 	return "MemoryFileSystem"
-}
-
-func (MemoryFileSystem) VolumeName(name string) string {
-	return ""
-}
-
-func (MemoryFileSystem) Normalize(path string) string {
-	return path
-}
-
-func (*MemoryFileSystem) Getwd() (string, error) {
-	return vfs.PathSeparatorString, nil
 }
 
 func (m *MemoryFileSystem) findFile(name string, link ...bool) (*fileData, string, error) {
@@ -91,7 +81,7 @@ outer:
 			}
 			next, err := data[cur].Get(e)
 			switch err {
-			case ErrNoDir:
+			case ErrNotDir:
 				return nil, "", nil, "", &os.PathError{Op: "", Path: path, Err: err}
 			case os.ErrNotExist:
 				if i == len(elems)-1 {
@@ -186,7 +176,7 @@ func (m *MemoryFileSystem) OpenFile(name string, flags int, perm os.FileMode) (v
 		if flags&(os.O_CREATE) == 0 {
 			return nil, &os.PathError{Op: "create", Path: name, Err: os.ErrNotExist}
 		}
-		f := createFile(perm)
+		f = createFile(perm)
 		err = dir.Add(n, f)
 		if err != nil {
 			return nil, &os.PathError{Op: "create", Path: name, Err: err}
@@ -194,7 +184,7 @@ func (m *MemoryFileSystem) OpenFile(name string, flags int, perm os.FileMode) (v
 	}
 	h := newFileHandle(n, f)
 
-	if flags == os.O_RDONLY {
+	if flags&(os.O_RDONLY|os.O_WRONLY|os.O_RDWR) == os.O_RDONLY {
 		h.readOnly = true
 	} else {
 		if flags&os.O_APPEND != 0 {
