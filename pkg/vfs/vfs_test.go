@@ -28,6 +28,7 @@ import (
 	"github.com/mandelsoft/vfs/pkg/memoryfs"
 	. "github.com/mandelsoft/vfs/pkg/test"
 	. "github.com/mandelsoft/vfs/pkg/vfs"
+	"github.com/mandelsoft/vfs/test/pkg/test"
 )
 
 var _ = Describe("filesystem", func() {
@@ -100,6 +101,60 @@ var _ = Describe("filesystem", func() {
 			Expect(fs.Join("", "other")).To(Equal("other"))
 			Expect(fs.Join("", "path", "", "", "other", "")).To(Equal("path/other"))
 			Expect(fs.Join("//")).To(Equal("/"))
+		})
+
+		Context("ReadFile", func() {
+			It("read existing file", func() {
+				content := []byte("This is a test")
+				test.ExpectCreateFile(fs, "f1", content, nil)
+				result, err := ReadFile(fs, "f1")
+				Expect(err).To(Succeed())
+				Expect(result).To(Equal(content))
+			})
+
+			It("read non-existing file", func() {
+				result, err := ReadFile(fs, "f1")
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(HaveLen(0))
+			})
+		})
+
+		Context("WriteFile", func() {
+			It("write non-existing file", func() {
+				content := []byte("This is a test")
+				Expect(WriteFile(fs, "f1", content, os.ModePerm)).To(Succeed())
+
+				file, err := fs.Open("f1")
+				Expect(err).To(Succeed())
+				test.ExpectRead(file, content)
+				Expect(file.Close()).To(Succeed())
+			})
+
+			It("overwrite existing file", func() {
+				content := []byte("Other")
+				test.ExpectCreateFile(fs, "f1", []byte("This is a test"), nil)
+				Expect(WriteFile(fs, "f1", content, os.ModePerm)).To(Succeed())
+
+				file, err := fs.Open("f1")
+				Expect(err).To(Succeed())
+				test.ExpectRead(file, content)
+				Expect(file.Close()).To(Succeed())
+			})
+		})
+
+		Context("ReadDir", func() {
+			It("read all directories of a subpath", func() {
+				Expect(fs.MkdirAll("/d1/d11/d111", os.ModePerm)).To(Succeed())
+				Expect(fs.MkdirAll("/d1/d12/d112", os.ModePerm)).To(Succeed())
+
+				dirs, err := ReadDir(fs, "/d1")
+				Expect(err).To(Succeed())
+				Expect(dirs).To(HaveLen(2))
+				Expect(dirs[0].IsDir()).To(BeTrue())
+				Expect(dirs[0].Name()).To(Equal("d11"))
+				Expect(dirs[1].IsDir()).To(BeTrue())
+				Expect(dirs[1].Name()).To(Equal("d12"))
+			})
 		})
 
 	})

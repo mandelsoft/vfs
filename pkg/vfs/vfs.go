@@ -195,3 +195,16 @@ func (fs *VFS) DirExists(path string) (bool, error) {
 func (fs *VFS) IsDir(path string) (bool, error) {
 	return IsDir(fs, path)
 }
+
+func (fs *VFS) ReadFile(path string) ([]byte, error) {
+	return ReadFile(fs, path)
+}
+
+func (fs *VFS) WriteFile(path string, data []byte, mode os.FileMode) error {
+	return WriteFile(fs, path, data, mode)
+}
+
+func (fs *VFS) ReadDir(path string) ([]os.FileInfo, error) {
+	return ReadDir(fs, path)
+}
+
