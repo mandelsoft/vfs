@@ -20,12 +20,20 @@ package vfs
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/mandelsoft/filepath/pkg/filepath"
 )
+
+func filesys(fs ...FileSystem) FileSystem {
+	if len(fs) == 0 {
+		return nil
+	}
+	return fs[0]
+}
 
 // IsPathSeparator reports whether c is a directory separator character.
 func IsPathSeparator(c uint8) bool {
@@ -36,6 +44,9 @@ func IsPathSeparator(c uint8) bool {
 // a Separator if necessary. Join never calls Clean on the result to
 // assure the result denotes the same file as the input.
 // Empty entries will be ignored.
+// If a FileSystem is given, the file systems volume.
+// handling is applied, otherwise the path argument
+// is handled as a regular plain path
 func Join(fs FileSystem, elems ...string) string {
 	for i := 0; i < len(elems); i++ {
 		if elems[i] == "" {
@@ -60,9 +71,15 @@ func Join(fs FileSystem, elems ...string) string {
 //
 // If the result of this process is an empty string, Clean
 // returns the string ".".
+// If a FileSystem is given, the file systems volume.
+// handling is applied, otherwise the path argument
+// is handled as a regular plain path
 func Clean(fs FileSystem, p string) string {
-	p = fs.Normalize(p)
-	vol := fs.VolumeName(p)
+	vol := ""
+	if fs != nil {
+		p = fs.Normalize(p)
+		vol = fs.VolumeName(p)
+	}
 	return vol + path.Clean(p[len(vol):])
 }
 
@@ -73,9 +90,15 @@ func Clean(fs FileSystem, p string) string {
 // The returned path does not end in a Separator unless it is the root directory.
 // This function is the counterpart of Base
 // Base("a/b/")="b" and Dir("a/b/") = "a".
+// If a FileSystem is given, the file systems volume.
+// handling is applied, otherwise the path argument
+// is handled as a regular plain path
 func Dir(fs FileSystem, path string) string {
 	def := "."
-	vol, path := SplitVolume(fs, path)
+	vol := ""
+	if fs != nil {
+		vol, path = SplitVolume(fs, path)
+	}
 	i := len(path) - 1
 	for i > 0 && IsPathSeparator(path[i]) {
 		i--
@@ -94,8 +117,16 @@ func Dir(fs FileSystem, path string) string {
 	return vol + path
 }
 
+// Base extracts the last path component.
+// For the root path it returns the root name,
+// For an empty path . is returned
+// If a FileSystem is given, the file systems volume.
+// handling is applied, otherwise the path argument
+// is handled as a regular plain path
 func Base(fs FileSystem, path string) string {
-	_, path = SplitVolume(fs, path)
+	if fs != nil {
+		_, path = SplitVolume(fs, path)
+	}
 	i := len(path) - 1
 	for i > 0 && IsPathSeparator(path[i]) {
 		i--
@@ -114,11 +145,17 @@ func Base(fs FileSystem, path string) string {
 	return path
 }
 
-// Trim eleminates trailing slashes from a path name.
+// Trim eliminates trailing slashes from a path name.
 // An empty path is unchanged.
+// If a FileSystem is given, the file systems volume
+// handling is applied, otherwise the path argument
+// is handled as a regular plain path
 func Trim(fs FileSystem, path string) string {
-	path = fs.Normalize(path)
-	vol := fs.VolumeName(path)
+	vol := ""
+	if fs != nil {
+		path = fs.Normalize(path)
+		vol = fs.VolumeName(path)
+	}
 	i := len(path) - 1
 	for i > len(vol) && IsPathSeparator(path[i]) {
 		i--
@@ -352,4 +389,38 @@ func IsDir(fs FileSystem, path string) (bool, error) {
 		return false, err
 	}
 	return fi.IsDir(), nil
+}
+
+func CopyFile(srcfs FileSystem, src string, dstfs FileSystem, dst string) error {
+
+	fi, err := srcfs.Lstat(src)
+	if err != nil {
+		return err
+	}
+	if !fi.Mode().IsRegular() {
+		return errors.New("no regular file")
+	}
+	s, err := srcfs.Open(src)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	d, err := dstfs.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, fi.Mode()&os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+
+	_, err = io.Copy(d, s)
+	return err
+}
+
+func Touch(fs FileSystem, path string, perm os.FileMode) error {
+	file, err := fs.OpenFile(path, os.O_CREATE, perm&os.ModePerm)
+	if err != nil {
+		return err
+	}
+	file.Close()
+	return nil
 }

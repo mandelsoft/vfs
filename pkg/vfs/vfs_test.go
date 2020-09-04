@@ -34,6 +34,18 @@ var _ = Describe("filesystem", func() {
 	})
 
 	Context("utils", func() {
+		It("base", func() {
+			Expect(fs.Base("/")).To(Equal("/"))
+			Expect(fs.Base("//")).To(Equal("/"))
+			Expect(fs.Base("")).To(Equal("."))
+			Expect(fs.Base(".")).To(Equal("."))
+			Expect(fs.Base("/.")).To(Equal("."))
+			Expect(fs.Base("/base")).To(Equal("base"))
+			Expect(fs.Base("/base/")).To(Equal("base"))
+			Expect(fs.Base("/base/.")).To(Equal("."))
+			Expect(fs.Base("/path/base/.")).To(Equal("."))
+		})
+
 		It("trim", func() {
 			Expect(fs.Trim("path/")).To(Equal("path"))
 			Expect(fs.Trim("path//other")).To(Equal("path/other"))

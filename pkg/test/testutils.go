@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"os"
 
 	. "github.com/onsi/gomega"
 
@@ -68,7 +69,7 @@ func ExpectRead(f io.Reader, content []byte) {
 	Expect(buf.Bytes()).To(Equal(content))
 }
 
-func ExpectCreateFile(fs vfs.FileSystem, path string, content []byte, err error) {
+func ExpectFileCreate(fs vfs.FileSystem, path string, content []byte, err error) {
 	f, ferr := fs.Create(path)
 	if err == nil {
 		Expect(ferr).To(BeNil())
@@ -94,4 +95,23 @@ func ExpectCreateFile(fs vfs.FileSystem, path string, content []byte, err error)
 		Expect(ioutil.ReadAll(f)).To(Equal(content))
 		Expect(f.Close()).To(Succeed())
 	}
+}
+
+func ExpectFileWrite(fs vfs.FileSystem, path string, flags int, content []byte, check ...bool) {
+	f, err := fs.OpenFile(path, flags|os.O_WRONLY, os.ModePerm)
+	Expect(err).To(Succeed())
+	n, err := f.Write(content)
+	Expect(err).To(Succeed())
+	Expect(n).To(Equal(n))
+	Expect(f.Close()).To(Succeed())
+	if len(check) == 0 || check[0] {
+		ExpectFileContent(fs, path, content)
+	}
+}
+
+func ExpectFileContent(fs vfs.FileSystem, path string, content []byte) {
+	f, err := fs.Open(path)
+	Expect(err).To(Succeed())
+	ExpectRead(f, content)
+	Expect(f.Close()).To(Succeed())
 }

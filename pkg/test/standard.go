@@ -99,13 +99,11 @@ func StandardTest(creator func() vfs.FileSystem) bool {
 	Context("files", func() {
 		It("create file in dir", func() {
 			Expect(fs.Mkdir("d1", os.ModePerm)).To(BeNil())
-			ExpectCreateFile(fs, "/d1/f1", nil, nil)
+			ExpectFileCreate(fs, "/d1/f1", nil, nil)
 		})
 		It("read", func() {
-			ExpectCreateFile(fs, "f1", []byte("This is a test\n"), nil)
-			f, err := fs.Open("/f1")
-			Expect(err).To(Succeed())
-			ExpectRead(f, []byte("This is a test\n"))
+			ExpectFileCreate(fs, "f1", []byte("This is a test\n"), nil)
+			ExpectFileContent(fs, "/f1", []byte("This is a test\n"))
 		})
 
 		It("open file O_CREATE on non existing path", func() {
@@ -125,24 +123,25 @@ func StandardTest(creator func() vfs.FileSystem) bool {
 			Expect(err).To(Succeed())
 			Expect(f.Write(content)).To(Equal(len(content)))
 			Expect(f.Close()).To(Succeed())
-			f, err = fs.Open("/f1")
-			Expect(err).To(Succeed())
-			ExpectRead(f, []byte("This is a test\n"))
 			ExpectFolders(fs, "/", []string{"f1"}, nil)
+			ExpectFileContent(fs, "/f1", content)
 		})
 
 		It("open file O_CREATE|O_TRUNC on  existing path", func() {
 			content := []byte("Other\n")
-			ExpectCreateFile(fs, "f1", []byte("This is a test\n"), nil)
+			ExpectFileCreate(fs, "f1", []byte("This is a test\n"), nil)
 
 			f, err := fs.OpenFile("f1", os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
 			Expect(err).To(Succeed())
 			Expect(f.Write(content)).To(Equal(len(content)))
 			Expect(f.Close()).To(Succeed())
-			f, err = fs.Open("/f1")
-			Expect(err).To(Succeed())
-			ExpectRead(f, content)
+			ExpectFileContent(fs, "/f1", content)
 			ExpectFolders(fs, "/", []string{"f1"}, nil)
+		})
+
+		It("write", func() {
+			content := []byte("This is a test\n")
+			ExpectFileWrite(fs, "f1", os.O_CREATE, content)
 		})
 
 	})
