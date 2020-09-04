@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mandelsoft/vfs/pkg/utils"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
@@ -32,6 +33,13 @@ type fileData struct {
 	entries DirectoryEntries
 	mode    os.FileMode
 	modtime time.Time
+}
+
+func asFileData(data utils.FileData) *fileData {
+	if data == nil {
+		return nil
+	}
+	return data.(*fileData)
 }
 
 func (f *fileData) IsDir() bool {
@@ -110,7 +118,7 @@ func (f *fileData) Add(name string, s *fileData) error {
 	return nil
 }
 
-func (f *fileData) Get(name string) (*fileData, error) {
+func (f *fileData) Get(name string) (utils.FileData, error) {
 	f.Lock()
 	defer f.Unlock()
 	if !f.IsDir() {

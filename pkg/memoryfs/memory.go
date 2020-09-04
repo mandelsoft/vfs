@@ -53,67 +53,8 @@ func (m *MemoryFileSystem) findFile(name string, link ...bool) (*fileData, strin
 }
 
 func (m *MemoryFileSystem) createInfo(name string, link ...bool) (*fileData, string, *fileData, string, error) {
-	var data []*fileData
-	var path string
-
-	_, elems, _ := vfs.SplitPath(m, name)
-	getlink := true
-	if len(link) > 0 {
-		getlink = link[0]
-	}
-outer:
-	for {
-		path = "/"
-		data = []*fileData{m.root}
-
-		for i := 0; i < len(elems); i++ {
-			e := elems[i]
-			cur := len(data) - 1
-			switch e {
-			case ".":
-				continue
-			case "..":
-				if len(data) > 1 {
-					data = data[:cur]
-					path, _ = vfs.Split(m, path)
-				}
-				continue
-			}
-			next, err := data[cur].Get(e)
-			switch err {
-			case ErrNotDir:
-				return nil, "", nil, "", &os.PathError{Op: "", Path: path, Err: err}
-			case os.ErrNotExist:
-				if i == len(elems)-1 {
-					return data[cur], path, nil, e, nil
-				}
-				return nil, "", nil, "", &os.PathError{Op: "", Path: vfs.Join(m, path, e), Err: err}
-			}
-			if !next.IsSymlink() || (!getlink && i == len(elems)-1) {
-				path = vfs.Join(m, path, e)
-				data = append(data, next)
-				continue
-			}
-			l := next.GetSymlink()
-			_, nested, rooted := vfs.SplitPath(m, l)
-			if rooted {
-				elems = append(nested, elems[i+1:]...)
-				i = 0
-				continue outer
-			}
-			elems = append(append(elems[:i], nested...), elems[i+1:]...)
-			i--
-		}
-		break
-	}
-	if path == vfs.PathSeparatorString {
-		return m.root, path, m.root, "", nil
-	}
-	d, b := vfs.Split(m, path)
-	if d == "" {
-		return m.root, vfs.PathSeparatorString, data[len(data)-1], b, nil
-	}
-	return data[len(data)-2], d, data[len(data)-1], b, nil
+	d, dn, f, fn, err := utils.EvaluatePath(m, m.root, name, link...)
+	return asFileData(d), dn, asFileData(f), fn, err
 }
 
 func (m *MemoryFileSystem) Create(name string) (vfs.File, error) {
@@ -152,9 +93,9 @@ func (m *MemoryFileSystem) MkdirAll(path string, perm os.FileMode) error {
 		}
 		if next == nil {
 			next = createDir(perm)
-			parent.Add(e, next)
+			parent.Add(e, asFileData(next))
 		}
-		parent = next
+		parent = asFileData(next)
 	}
 	return nil
 }
