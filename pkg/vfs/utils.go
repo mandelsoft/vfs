@@ -19,10 +19,12 @@
 package vfs
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -372,4 +374,55 @@ func Touch(fs FileSystem, path string, perm os.FileMode) error {
 	}
 	file.Close()
 	return nil
+}
+
+// ReadFile reads the file named by filename and returns the contents.
+// A successful call returns err == nil, not err == EOF. Because ReadFile
+// reads the whole file, it does not treat an EOF from Read as an error
+// to be reported.
+func ReadFile(fs FileSystem, path string) ([]byte, error) {
+	file, err := fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, file); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// WriteFile writes data to a file named by filename.
+// If the file does not exist, WriteFile creates it with permissions perm
+// (before umask); otherwise WriteFile truncates it before writing.
+func WriteFile(fs FileSystem, filename string, data []byte, mode os.FileMode) error {
+	f, err := fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	n, err := f.Write(data)
+	if err == nil && n < len(data) {
+		err = io.ErrShortWrite
+	}
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+	return err
+}
+
+// ReadDir reads the directory named by path and returns
+// a list of directory entries sorted by filename.
+func ReadDir(fs FileSystem, path string) ([]os.FileInfo, error) {
+	f, err := fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	list, err := f.Readdir(-1)
+	f.Close()
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].Name() < list[j].Name() })
+	return list, nil
 }
