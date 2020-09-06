@@ -1,6 +1,6 @@
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
-# github.com/mandelsoft/filepath v0.0.0-20200902151426-f6fe988ac4aa
+# github.com/mandelsoft/filepath v0.0.0-20200906144341-f6f7308759ed
 github.com/mandelsoft/filepath/pkg/filepath
 # github.com/nxadm/tail v1.4.4
 github.com/nxadm/tail

@@ -181,7 +181,9 @@ func exists_(err error) bool {
 // The returned path does not end in a Separator unless it is the root directory.
 // This function is the counterpart of Base
 // Base("a/b/")="b" and Dir("a/b/") = "a".
+// In general Trim(Join(Dir2(path),Base(path))) should be Trim(path)
 func Dir2(path string) string {
+	def := "."
 	vol := VolumeName(path)
 	i := len(path) - 1
 	for i > len(vol) && os.IsPathSeparator(path[i]) {
@@ -191,13 +193,14 @@ func Dir2(path string) string {
 		i--
 	}
 	for i > len(vol) && os.IsPathSeparator(path[i]) {
+		def = string(os.PathSeparator)
 		i--
 	}
-	path = vol + path[len(vol):i+1]
+	path = path[len(vol) : i+1]
 	if path == "" {
-		return "."
+		return def
 	}
-	return path
+	return vol + path
 }
 
 // Dir acts like filepath.Dir, but does not
@@ -207,19 +210,22 @@ func Dir2(path string) string {
 // a trailing Separator. Base("a/b/")="b" and
 // Dir("a/b/") = "a/b".
 func Dir(path string) string {
+	def := "."
 	vol := VolumeName(path)
 	i := len(path) - 1
 	for i >= len(vol) && !os.IsPathSeparator(path[i]) {
 		i--
 	}
 	for i > len(vol) && os.IsPathSeparator(path[i]) {
+		def = string(os.PathSeparator)
 		i--
 	}
-	path = vol + path[len(vol):i+1]
+
+	path = path[len(vol) : i+1]
 	if path == "" {
-		return "."
+		path = def
 	}
-	return path
+	return vol + path
 }
 
 func Base(path string) string {
@@ -239,11 +245,10 @@ func Base(path string) string {
 		}
 		return "."
 	}
-
 	return path
 }
 
-// Trim eleminates trailing slashes from a path name.
+// Trim eleminates additional slashes and dot segments from a path name.
 // An empty path is unchanged.
 //
 func Trim(path string) string {
@@ -252,9 +257,35 @@ func Trim(path string) string {
 	for i > len(vol) && os.IsPathSeparator(path[i]) {
 		i--
 	}
-	p := path[:i+1]
 
-	return p
+	path = path[:i+1]
+
+	k := len(path)
+	i = k - 1
+	for i >= len(vol) {
+		j := i
+		for j >= len(vol) && os.IsPathSeparator(path[j]) {
+			j--
+		}
+		if i != j {
+			if path[i+1:k] == "." {
+				if j < len(vol) && k == len(path) {
+					j++ // keep starting separator instead of trailing one, because this does not exist
+				}
+				i = k
+			}
+			path = path[:j+1] + path[i:]
+			i = j
+			k = i + 1
+		}
+		i--
+	}
+	if k < len(path) && path[len(vol):k] == "." {
+		path = path[:len(vol)] + path[k+1:]
+	}
+
+	return path
+
 }
 
 // Split2 splits path immediately following the final Separator,

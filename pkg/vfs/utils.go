@@ -24,8 +24,6 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"github.com/mandelsoft/filepath/pkg/filepath"
 )
 
 func filesys(fs ...FileSystem) FileSystem {
@@ -160,21 +158,31 @@ func Trim(fs FileSystem, path string) string {
 	for i > len(vol) && IsPathSeparator(path[i]) {
 		i--
 	}
-	p := path[:i+1]
-	i = len(p) - 1
+	k := i + 1
+	path = path[:k]
 	for i >= len(vol) {
 		j := i
-		for j >= len(vol) && IsPathSeparator(p[j]) {
+		for j >= len(vol) && IsPathSeparator(path[j]) {
 			j--
 		}
 		if i != j {
-			p = p[:j+1] + p[i:]
+			if path[i+1:k] == "." {
+				if j < len(vol) && k == len(path) {
+					j++ // keep starting separator instead of trailing one, because this does not exist
+				}
+				i = k
+			}
+			path = path[:j+1] + path[i:]
 			i = j
+			k = i + 1
 		}
 		i--
 	}
+	if k < len(path) && path[len(vol):k] == "." {
+		path = path[:len(vol)] + path[k+1:]
+	}
 
-	return p
+	return path
 }
 
 // IsAbs return true if the given path is an absolute one
@@ -200,26 +208,31 @@ func SplitVolume(fs FileSystem, path string) (string, string) {
 
 // Canonical returns the canonical absolute path of a file.
 // If exist=false the denoted file must not exist, but
-// then the part of the initial path refering to a not existing
+// then the part of the initial path referring to a not existing
 // directory structure is lexically resolved (like Clean) and
 // does not consider potential symbolic links that might occur
 // if the file is finally created in the future.
 func Canonical(fs FileSystem, path string, exist bool) (string, error) {
-	return walk(fs, path, -1, exist)
+	if !IsAbs(fs, path) {
+		wd, err := fs.Getwd()
+		if err != nil {
+			return "", err
+		}
+		path = Join(fs, wd, path)
+	}
+	return evalPath(fs, path, exist)
 }
 
-// EvalSymLinks resolves all symbolic links in a path
+// EvalSymlinks resolves all symbolic links in a path
 // and returns a path not containing any symbolic link
 // anymore. It does not call Clean on a non-canonical path,
 // so the result always denotes the same file than the original path.
 // If the given path is a relative one, a
-// reLative one is returned as long as there is no
-// absolute symbolic link and the relative path does
-// not goes up the current working diretory.
-// If a relative path is returned, symbolic links
-// up the current working directory are not resolved.
+// relative one is returned as long as there is no
+// absolute symbolic link. It may contain `..`, if it is above
+// the current working directory
 func EvalSymlinks(fs FileSystem, path string) (string, error) {
-	return walk(fs, path, 0, false)
+	return evalPath(fs, path, false)
 }
 
 // Abs returns an absolute representation of path.
@@ -232,7 +245,7 @@ func EvalSymlinks(fs FileSystem, path string) (string, error) {
 // Abs never calls Clean on the result, so the resulting path
 // will denote the same file as the argument.
 func Abs(fs FileSystem, path string) (string, error) {
-	path, err := walk(fs, path, 0, false)
+	path, err := evalPath(fs, path, false)
 	if err != nil {
 		return "", err
 	}
@@ -243,71 +256,7 @@ func Abs(fs FileSystem, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(p, path), nil
-}
-
-func walk(fs FileSystem, p string, parent int, exist bool) (string, error) {
-	p = fs.Normalize(p)
-	var rest []string = []string{}
-
-	links := 0
-
-	for !IsRoot(fs, p) && p != "" {
-		n, b := Split(fs, p)
-		if b == "" {
-			p = n
-			continue
-		}
-		fi, err := fs.Lstat(p)
-		if Exists_(err) {
-			if err != nil && !os.IsPermission(err) {
-				return "", err
-			}
-			if fi.Mode()&os.ModeSymlink != 0 {
-				newpath, err := fs.Readlink(p)
-				if err != nil {
-					return "", err
-				}
-				newpath = fs.Normalize(newpath)
-				if IsAbs(fs, newpath) {
-					p = newpath
-				} else {
-					p = filepath.Join(n, newpath)
-				}
-				links++
-				if links > 255 {
-					return "", errors.New("AbsPath: too many links")
-				}
-				continue
-			}
-		} else {
-			if exist {
-				return "", err
-			}
-		}
-		if b != "." {
-			rest = append([]string{b}, rest...)
-			if parent >= 0 && b == ".." {
-				parent++
-			} else {
-				if parent > 0 {
-					parent--
-				}
-			}
-		}
-		if parent != 0 && n == "" {
-			p, err = fs.Getwd()
-			if err != nil {
-				return "", err
-			}
-		} else {
-			p = n
-		}
-	}
-	if p == "" {
-		return filepath.Clean(filepath.Join(rest...)), nil
-	}
-	return filepath.Clean(filepath.Join(append([]string{p}, rest...)...)), nil
+	return Join(fs, p, path), nil
 }
 
 // Split splits path immediately following the final Separator,

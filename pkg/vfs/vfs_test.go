@@ -19,10 +19,14 @@
 package vfs_test
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/mandelsoft/vfs/pkg/cwdfs"
 	"github.com/mandelsoft/vfs/pkg/memoryfs"
+	. "github.com/mandelsoft/vfs/pkg/test"
 	. "github.com/mandelsoft/vfs/pkg/vfs"
 )
 
@@ -46,13 +50,45 @@ var _ = Describe("filesystem", func() {
 			Expect(fs.Base("/path/base/.")).To(Equal("."))
 		})
 
+		It("dir/base combinations", func() {
+			parts := []string{"file", "/", ".", ".."}
+			type check func([]string)
+
+			level := func(f check) check {
+				return func(segments []string) {
+					for _, s := range parts {
+						next := append(segments, s)
+						f(next)
+					}
+				}
+			}
+			level(level(level(level(func(segments []string) {
+				path := Join(nil, segments...)
+				//fmt.Printf("trimming %+v:  %q\n", segments, path)
+				Expect(Trim(nil, Join(nil, Dir(nil, path), Base(nil, path)))).To(Equal(Trim(nil, path)))
+			}))))([]string{})
+
+		})
+
 		It("trim", func() {
 			Expect(fs.Trim("path/")).To(Equal("path"))
-			Expect(fs.Trim("path//other")).To(Equal("path/other"))
-			Expect(fs.Trim("/path/other")).To(Equal("/path/other"))
+			Expect(fs.Trim("path//")).To(Equal("path"))
 			Expect(fs.Trim("path/other")).To(Equal("path/other"))
+			Expect(fs.Trim("path//other")).To(Equal("path/other"))
+			Expect(fs.Trim("path//other/")).To(Equal("path/other"))
+			Expect(fs.Trim("path//other//")).To(Equal("path/other"))
+			Expect(fs.Trim("/path/other/")).To(Equal("/path/other"))
+			Expect(fs.Trim("/path/other//")).To(Equal("/path/other"))
 			Expect(fs.Trim("//path//other")).To(Equal("/path/other"))
+			Expect(fs.Trim("//path//other/")).To(Equal("/path/other"))
+			Expect(fs.Trim("//path//other//")).To(Equal("/path/other"))
 			Expect(fs.Trim("//")).To(Equal("/"))
+			Expect(fs.Trim("/./a/.")).To(Equal("/a"))
+			Expect(fs.Trim("/../a/.")).To(Equal("/../a"))
+			Expect(fs.Trim("././a/.")).To(Equal("a"))
+			Expect(fs.Trim("./../a/.")).To(Equal("../a"))
+			Expect(fs.Trim(".")).To(Equal("."))
+			Expect(fs.Trim("/.")).To(Equal("/"))
 		})
 		It("join", func() {
 			Expect(fs.Join("path")).To(Equal("path"))
@@ -64,5 +100,53 @@ var _ = Describe("filesystem", func() {
 			Expect(fs.Join("//")).To(Equal("/"))
 		})
 
+	})
+
+	Context("eval sym links", func() {
+		var fs *VFS
+		var cwd *VFS
+
+		BeforeEach(func() {
+			fs = New(memoryfs.New())
+			Expect(fs.Mkdir("d1", os.ModePerm)).To(Succeed())
+			Expect(fs.Mkdir("d1/d2", os.ModePerm)).To(Succeed())
+			Expect(fs.Mkdir("d1/d2/d3", os.ModePerm)).To(Succeed())
+			ExpectFileCreate(fs, "d1/d2/f", nil, nil)
+
+			t, _ := cwdfs.New(fs, "/d1")
+			cwd = New(t)
+		})
+
+		It("link rel back fail", func() {
+			Expect(fs.Symlink("f/..", "d1/d2/link")).To(Succeed())
+			ExpectErr(EvalSymlinks(fs, "d1/d2/link"))
+		})
+		It("rel back", func() {
+			Expect(fs.Symlink("d2/f", "d1/link")).To(Succeed())
+			Expect(EvalSymlinks(fs, "d1/d2/f1/../../../../../d1/link")).To(Equal("../../d1/d2/f"))
+		})
+		It("rel back symlink", func() {
+			Expect(EvalSymlinks(fs, "d1/d2/f1/../..")).To(Equal("d1"))
+			Expect(EvalSymlinks(fs, "d1/d2/f1/../../..")).To(Equal("."))
+			Expect(EvalSymlinks(fs, "d1/d2/f1/../../../..")).To(Equal(".."))
+			Expect(EvalSymlinks(fs, "d1/d2/f1/../../../../../d1")).To(Equal("../../d1"))
+		})
+		It("abs back", func() {
+			Expect(EvalSymlinks(fs, "/d1/d2/f1/../..")).To(Equal("/d1"))
+			Expect(EvalSymlinks(fs, "/d1/d2/f1/../../..")).To(Equal("/"))
+			Expect(EvalSymlinks(fs, "/d1/d2/f1/../../../..")).To(Equal("/"))
+		})
+
+		It("cwd link rel back fail", func() {
+			Expect(cwd.Symlink("f/..", "/d1/d2/link")).To(Succeed())
+			ExpectErr(EvalSymlinks(cwd, "d2/link"))
+		})
+		It("cwd link rel back", func() {
+			Expect(cwd.Symlink("../..", "/d1/d2/d3/link")).To(Succeed())
+			Expect(EvalSymlinks(cwd, "d2/d3/link")).To(Equal("."))
+			Expect(EvalSymlinks(cwd, "d2/d3/link/..")).To(Equal(".."))
+			Expect(cwd.Symlink("d3/link/..", "/d1/d2/link")).To(Succeed())
+			Expect(EvalSymlinks(cwd, "d2/link/..")).To(Equal("../.."))
+		})
 	})
 })

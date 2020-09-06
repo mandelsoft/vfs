@@ -115,3 +115,17 @@ func ExpectFileContent(fs vfs.FileSystem, path string, content []byte) {
 	ExpectRead(f, content)
 	Expect(f.Close()).To(Succeed())
 }
+
+type ErrMatcher func(err error) bool
+
+func ExpectMatchedErr(m ErrMatcher, args ...interface{}) {
+	Expect(m(args[len(args)-1].(error))).To(BeTrue())
+}
+
+func ExpectErr(args ...interface{}) {
+	Expect(args[len(args)-1]).To(HaveOccurred())
+}
+
+func ExpectSucceeded(args ...interface{}) {
+	Expect(args[len(args)-1]).To(Succeed())
+}

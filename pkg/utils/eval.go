@@ -87,7 +87,7 @@ outer:
 				i = 0
 				continue outer
 			}
-			elems = append(append(elems[:i], nested...), elems[i+1:]...)
+			elems = append(elems[:i], append(nested, elems[i+1:]...)...)
 			i--
 		}
 		break
