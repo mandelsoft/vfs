@@ -35,11 +35,18 @@ type fileData struct {
 	modtime time.Time
 }
 
-func asFileData(data utils.FileData) *fileData {
-	if data == nil {
-		return nil
-	}
-	return data.(*fileData)
+var _ utils.FileData = &fileData{}
+
+func (f *fileData) Data() []byte {
+	return f.data
+}
+
+func (f *fileData) SetData(data []byte) {
+	f.data = data
+}
+
+func (f *fileData) Files() []os.FileInfo {
+	return f.entries.Files()
 }
 
 func (f *fileData) IsDir() bool {
@@ -54,92 +61,59 @@ func (f *fileData) IsSymlink() bool {
 	return (f.mode & os.ModeType) == os.ModeSymlink
 }
 
-func createFile(perm os.FileMode) *fileData {
-	return &fileData{mode: os.ModeTemporary | (perm & os.ModePerm), modtime: time.Now()}
-}
-
-func createDir(perm os.FileMode) *fileData {
-	return &fileData{mode: os.ModeDir | os.ModeTemporary | (perm & os.ModePerm), entries: DirectoryEntries{}, modtime: time.Now()}
-}
-
-func createSymlink(link string, perm os.FileMode) *fileData {
-	return &fileData{mode: os.ModeSymlink | os.ModeTemporary | (perm & os.ModePerm), data: []byte(link), modtime: time.Now()}
-}
-
 func (f *fileData) GetSymlink() string {
-	f.Lock()
-	defer f.Unlock()
 	if f.IsSymlink() {
 		return string(f.data)
 	}
 	return ""
 }
-func (f *fileData) SetMode(mode os.FileMode) {
-	f.Lock()
-	f.mode = mode
-	f.Unlock()
+
+func (f *fileData) Mode() os.FileMode {
+	return f.mode
 }
 
-func (f *fileData) Chmod(mode os.FileMode) {
-	f.Lock()
-	f.mode = (f.mode & (^os.ModePerm)) | (mode & os.ModePerm)
-	f.Unlock()
+func (f *fileData) SetMode(mode os.FileMode) {
+	f.mode = mode
+}
+
+func (f *fileData) ModTime() time.Time {
+	return f.modtime
 }
 
 func (f *fileData) SetModTime(mtime time.Time) {
-	f.Lock()
-	f.setModTime(mtime)
-	f.Unlock()
-}
-
-func (f *fileData) setModTime(mtime time.Time) {
 	f.modtime = mtime
 }
 
-func (f *fileData) AddH(name string, s *fileData) (vfs.File, error) {
-	err := f.Add(name, s)
-	if err != nil {
-		return nil, err
-	}
-	return newFileHandle(name, s), nil
-}
-
-func (f *fileData) Add(name string, s *fileData) error {
-	f.Lock()
-	defer f.Unlock()
+func (f *fileData) GetEntry(name string) (utils.FileDataDirAccess, error) {
 	if !f.IsDir() {
-		return ErrNotDir
-	}
-	if _, ok := f.entries[name]; ok {
-		return os.ErrExist
-	}
-	f.entries.Add(name, s)
-	f.setModTime(time.Now())
-	return nil
-}
-
-func (f *fileData) Get(name string) (utils.FileData, error) {
-	f.Lock()
-	defer f.Unlock()
-	if !f.IsDir() {
-		return nil, ErrNotDir
+		return nil, vfs.ErrNotDir
 	}
 	e, ok := f.entries[name]
 	if ok {
 		return e, nil
 	}
-	return nil, os.ErrNotExist
+	return nil, vfs.ErrNotExist
+}
+
+func (f *fileData) Add(name string, s utils.FileData) error {
+	if !f.IsDir() {
+		return vfs.ErrNotDir
+	}
+	if _, ok := f.entries[name]; ok {
+		return os.ErrExist
+	}
+	f.entries.Add(name, s.(*fileData))
+	f.SetModTime(time.Now())
+	return nil
 }
 
 func (f *fileData) Del(name string) error {
-	f.Lock()
-	defer f.Unlock()
 	if !f.IsDir() {
-		return ErrNotDir
+		return vfs.ErrNotDir
 	}
 	_, ok := f.entries[name]
 	if !ok {
-		return os.ErrNotExist
+		return vfs.ErrNotExist
 	}
 	delete(f.entries, name)
 	return nil

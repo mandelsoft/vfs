@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package memoryfs
+package utils
 
 import (
 	"bytes"
@@ -28,27 +28,36 @@ import (
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
-type file struct {
+type FileData interface {
+	FileDataDirAccess
+	Data() []byte
+	Files() []os.FileInfo
+	SetData([]byte)
+	Mode() os.FileMode
+	SetMode(mode os.FileMode)
+	ModTime() time.Time
+	SetModTime(time.Time)
+	Add(name string, f FileData) error
+	Del(name string) error
+}
+
+type File struct {
 	// atomic requires 64-bit alignment for struct field access
 	offset       int64
 	readDirCount int64
 	closed       bool
 	readOnly     bool
-	fileData     *fileData
+	fileData     FileData
 	name         string
 }
 
-var _ vfs.File = &file{}
+var _ vfs.File = &File{}
 
-func newFileHandle(name string, data *fileData) *file {
-	return &file{name: name, fileData: data}
+func newFileHandle(name string, data FileData) *File {
+	return &File{name: name, fileData: data}
 }
 
-func (f file) Data() *fileData {
-	return f.fileData
-}
-
-func (f *file) Open() error {
+func (f *File) Open() error {
 	f.fileData.Lock()
 	f.offset = 0
 	f.readDirCount = 0
@@ -57,26 +66,26 @@ func (f *file) Open() error {
 	return nil
 }
 
-func (f *file) Close() error {
+func (f *File) Close() error {
 	f.fileData.Lock()
 	f.closed = true
 	f.fileData.Unlock()
 	return nil
 }
 
-func (f *file) Name() string {
+func (f *File) Name() string {
 	return f.name
 }
 
-func (f *file) Stat() (os.FileInfo, error) {
-	return newFileInfo(f.name, f.fileData), nil
+func (f *File) Stat() (os.FileInfo, error) {
+	return NewFileInfo(f.name, f.fileData), nil
 }
 
-func (f *file) Sync() error {
+func (f *File) Sync() error {
 	return nil
 }
 
-func (f *file) Readdir(count int) (files []os.FileInfo, err error) {
+func (f *File) Readdir(count int) (files []os.FileInfo, err error) {
 	if !f.fileData.IsDir() {
 		return nil, &os.PathError{Op: "readdir", Path: f.name, Err: ErrNotDir}
 	}
@@ -85,7 +94,7 @@ func (f *file) Readdir(count int) (files []os.FileInfo, err error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 
-	files = f.fileData.entries.Files()
+	files = f.fileData.Files()
 	if f.readDirCount >= int64(len(files)) {
 		files = []os.FileInfo{}
 	} else {
@@ -108,7 +117,7 @@ func (f *file) Readdir(count int) (files []os.FileInfo, err error) {
 	return files, err
 }
 
-func (f *file) Readdirnames(n int) (names []string, err error) {
+func (f *File) Readdirnames(n int) (names []string, err error) {
 	fi, err := f.Readdir(n)
 	names = make([]string, len(fi))
 	for i, f := range fi {
@@ -117,7 +126,7 @@ func (f *file) Readdirnames(n int) (names []string, err error) {
 	return names, err
 }
 
-func (f *file) Read(buf []byte) (int, error) {
+func (f *File) Read(buf []byte) (int, error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 	n, err := f.read(buf, f.offset, io.ErrUnexpectedEOF)
@@ -125,31 +134,32 @@ func (f *file) Read(buf []byte) (int, error) {
 	return n, err
 }
 
-func (f *file) read(b []byte, offset int64, err error) (int, error) {
+func (f *File) read(b []byte, offset int64, err error) (int, error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
-	if len(b) > 0 && int(offset) == len(f.fileData.data) {
+	data := f.fileData.Data()
+	if len(b) > 0 && int(offset) == len(data) {
 		return 0, io.EOF
 	}
-	if int(f.offset) > len(f.fileData.data) {
+	if int(f.offset) > len(data) {
 		return 0, err
 	}
 	n := len(b)
-	if len(f.fileData.data)-int(offset) < len(b) {
-		n = len(f.fileData.data) - int(offset)
+	if len(data)-int(offset) < len(b) {
+		n = len(data) - int(offset)
 	}
-	copy(b, f.fileData.data[offset:offset+int64(n)])
+	copy(b, data[offset:offset+int64(n)])
 	return n, nil
 }
 
-func (f *file) ReadAt(b []byte, off int64) (n int, err error) {
+func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 	return f.read(b, off, io.EOF)
 }
 
-func (f *file) Truncate(size int64) error {
+func (f *File) Truncate(size int64) error {
 	if f.readOnly {
 		return ErrReadOnly
 	}
@@ -161,37 +171,39 @@ func (f *file) Truncate(size int64) error {
 	}
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
-	if size > int64(len(f.fileData.data)) {
-		diff := size - int64(len(f.fileData.data))
-		f.fileData.data = append(f.fileData.data, bytes.Repeat([]byte{00}, int(diff))...)
+	data := f.fileData.Data()
+	if size > int64(len(data)) {
+		diff := size - int64(len(data))
+		f.fileData.SetData(append(data, bytes.Repeat([]byte{00}, int(diff))...))
 	} else {
-		f.fileData.data = f.fileData.data[0:size]
+		f.fileData.SetData(data[0:size])
 	}
-	f.fileData.setModTime(time.Now())
+	f.fileData.SetModTime(time.Now())
 	return nil
 }
 
-func (f *file) Seek(offset int64, whence int) (int64, error) {
+func (f *File) Seek(offset int64, whence int) (int64, error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
+	data := f.fileData.Data()
 	switch whence {
 	case 0:
 	case 1:
 		offset += f.offset
 	case 2:
-		offset = int64(len(f.fileData.data)) + offset
+		offset = int64(len(data)) + offset
 	}
-	if offset < 0 || offset >= int64(len(f.fileData.data)) {
+	if offset < 0 || offset >= int64(len(data)) {
 		return 0, ErrOutOfRange
 	}
 	f.offset = offset
 	return f.offset, nil
 }
 
-func (f *file) Write(buf []byte) (int, error) {
+func (f *File) Write(buf []byte) (int, error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 	n, err := f.write(buf, f.offset)
@@ -202,30 +214,31 @@ func (f *file) Write(buf []byte) (int, error) {
 	return int(n), nil
 }
 
-func (f *file) write(buf []byte, offset int64) (int, error) {
+func (f *File) write(buf []byte, offset int64) (int, error) {
 	if f.readOnly {
 		return 0, ErrReadOnly
 	}
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
+	data := f.fileData.Data()
 	n := int64(len(buf))
-	add := offset + n - int64(len(f.fileData.data))
-	copy(f.fileData.data[offset:], buf)
+	add := offset + n - int64(len(data))
+	copy(data[offset:], buf)
 	if add > 0 {
-		f.fileData.data = append(f.fileData.data, buf[n-add:]...)
+		f.fileData.SetData(append(data, buf[n-add:]...))
 	}
-	f.fileData.setModTime(time.Now())
+	f.fileData.SetModTime(time.Now())
 	return int(n), nil
 }
 
-func (f *file) WriteAt(buf []byte, off int64) (n int, err error) {
+func (f *File) WriteAt(buf []byte, off int64) (n int, err error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 	return f.write(buf, off)
 }
 
-func (f *file) WriteString(s string) (ret int, err error) {
+func (f *File) WriteString(s string) (ret int, err error) {
 	return f.Write([]byte(s))
 }
 

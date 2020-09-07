@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package memoryfs
+package utils
 
 import (
 	"os"
@@ -28,47 +28,47 @@ import (
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type fileInfo struct {
-	*fileData
-	name string
+	fileData FileData
+	name     string
 }
 
-func newFileInfo(name string, file *fileData) os.FileInfo {
+var _ os.FileInfo = &fileInfo{}
+
+func NewFileInfo(name string, file FileData) os.FileInfo {
 	return &fileInfo{name: name, fileData: file}
 }
 
 var _ os.FileInfo = &fileInfo{}
 
 func (f *fileInfo) Name() string {
-	f.Lock()
-	defer f.Unlock()
 	return f.name
 }
 
 func (f *fileInfo) Mode() os.FileMode {
-	f.Lock()
-	defer f.Unlock()
-	return f.mode
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	return f.fileData.Mode()
 }
 
 func (f *fileInfo) ModTime() time.Time {
-	f.Lock()
-	defer f.Unlock()
-	return f.modtime
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
+	return f.fileData.ModTime()
 }
 
 func (f *fileInfo) IsDir() bool {
-	f.Lock()
-	defer f.Unlock()
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	return f.fileData.IsDir()
 }
 
 func (f *fileInfo) Sys() interface{} { return nil }
 
 func (f *fileInfo) Size() int64 {
-	f.Lock()
-	defer f.Unlock()
+	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	if f.fileData.IsDir() {
 		return int64(42)
 	}
-	return int64(len(f.data))
+	return int64(len(f.fileData.Data()))
 }

@@ -32,7 +32,7 @@ func (m DirectoryEntries) Add(name string, f *fileData) { m[name] = f }
 func (m DirectoryEntries) Remove(name string)           { delete(m, name) }
 func (m DirectoryEntries) Files() (files []os.FileInfo) {
 	for n, f := range m {
-		files = append(files, newFileInfo(n, f))
+		files = append(files, utils.NewFileInfo(n, f))
 	}
 	sort.Sort(utils.FilesSorter(files))
 	return files

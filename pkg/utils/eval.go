@@ -22,15 +22,17 @@ import (
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
-type FileData interface {
+type FileDataDirAccess interface {
+	Lock()
+	Unlock()
 	IsDir() bool
 	IsSymlink() bool
-	Get(name string) (FileData, error)
+	GetEntry(name string) (FileDataDirAccess, error)
 	GetSymlink() string
 }
 
-func EvaluatePath(fs vfs.FileSystem, root FileData, name string, link ...bool) (FileData, string, FileData, string, error) {
-	var data []FileData
+func EvaluatePath(fs vfs.FileSystem, root FileDataDirAccess, name string, link ...bool) (FileDataDirAccess, string, FileDataDirAccess, string, error) {
+	var data []FileDataDirAccess
 	var path string
 	var dir bool
 
@@ -42,7 +44,7 @@ func EvaluatePath(fs vfs.FileSystem, root FileData, name string, link ...bool) (
 outer:
 	for {
 		path = "/"
-		data = []FileData{root}
+		data = []FileDataDirAccess{root}
 		dir = true
 
 		for i := 0; i < len(elems); i++ {
@@ -64,7 +66,9 @@ outer:
 				}
 				continue
 			}
-			next, err := data[cur].Get(e)
+			data[cur].Lock()
+			next, err := data[cur].GetEntry(e)
+			data[cur].Unlock()
 			if vfs.IsErrNotDir(err) {
 				return nil, "", nil, "", vfs.NewPathError("", path, err)
 			}
@@ -74,13 +78,16 @@ outer:
 				}
 				return nil, "", nil, "", vfs.NewPathError("", vfs.Join(fs, path, e), err)
 			}
+			next.Lock()
 			if !next.IsSymlink() || (!getlink && i == len(elems)-1) {
 				dir = next.IsDir()
 				path = vfs.Join(fs, path, e)
 				data = append(data, next)
+				next.Unlock()
 				continue
 			}
 			link := next.GetSymlink()
+			next.Unlock()
 			_, nested, rooted := vfs.SplitPath(fs, link)
 			if rooted {
 				elems = append(nested, elems[i+1:]...)

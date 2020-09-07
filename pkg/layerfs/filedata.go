@@ -36,7 +36,7 @@ type fileData struct {
 	fi   os.FileInfo
 }
 
-func asFileData(data utils.FileData) *fileData {
+func asFileData(data utils.FileDataDirAccess) *fileData {
 	if data == nil {
 		return nil
 	}
@@ -47,7 +47,13 @@ func newFileData(fs vfs.FileSystem, base vfs.FileSystem, path string, fi os.File
 	return &fileData{fs: fs, base: base, path: path, fi: fi}
 }
 
-func (f *fileData) Get(name string) (utils.FileData, error) {
+func (f *fileData) Lock() {
+}
+
+func (f *fileData) Unlock() {
+}
+
+func (f *fileData) GetEntry(name string) (utils.FileDataDirAccess, error) {
 	if strings.HasPrefix(name, del_prefix) || name == opaque_del {
 		return nil, vfs.ErrNotExist
 	}

@@ -89,6 +89,8 @@ var _ = Describe("filesystem", func() {
 			Expect(fs.Trim("./../a/.")).To(Equal("../a"))
 			Expect(fs.Trim(".")).To(Equal("."))
 			Expect(fs.Trim("/.")).To(Equal("/"))
+			Expect(fs.Trim("//.")).To(Equal("/"))
+			Expect(fs.Trim("//.//")).To(Equal("/"))
 		})
 		It("join", func() {
 			Expect(fs.Join("path")).To(Equal("path"))
