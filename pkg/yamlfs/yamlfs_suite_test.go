@@ -16,29 +16,16 @@
  *  limitations under the License.
  */
 
-package memoryfs
+package yamlfs
 
 import (
-	"os"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
-	"github.com/mandelsoft/vfs/pkg/utils"
+	"testing"
 )
 
-type DirectoryEntries map[string]*fileData
-
-func (m DirectoryEntries) Len() int                     { return len(m) }
-func (m DirectoryEntries) Add(name string, f *fileData) { m[name] = f }
-func (m DirectoryEntries) Remove(name string)           { delete(m, name) }
-func (m DirectoryEntries) Files() (files []os.FileInfo) {
-	for n, f := range m {
-		files = append(files, utils.NewFileInfo(n, f))
-	}
-	return files
-}
-
-func (m DirectoryEntries) Names() (names []string) {
-	for x := range m {
-		names = append(names, x)
-	}
-	return names
+func TestNodes(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "YAML Suite")
 }

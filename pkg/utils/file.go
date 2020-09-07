@@ -23,6 +23,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/mandelsoft/vfs/pkg/vfs"
@@ -95,6 +96,7 @@ func (f *File) Readdir(count int) (files []os.FileInfo, err error) {
 	defer f.fileData.Unlock()
 
 	files = f.fileData.Files()
+	sort.Sort(FilesSorter(files))
 	if f.readDirCount >= int64(len(files)) {
 		files = []os.FileInfo{}
 	} else {

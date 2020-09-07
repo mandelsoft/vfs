@@ -52,7 +52,7 @@ func ExpectFolders(fs vfs.FileSystem, path string, names []string, err error) {
 	Expect(found).To(Equal(names))
 }
 
-func ExpectRead(f io.Reader, content []byte) {
+func ExpectRead(f io.Reader, content interface{}) {
 	buf := bytes.Buffer{}
 	rbuf := [10]byte{}
 
@@ -66,7 +66,11 @@ func ExpectRead(f io.Reader, content []byte) {
 		}
 		Expect(err).To(Succeed())
 	}
-	Expect(buf.Bytes()).To(Equal(content))
+	if s, ok := content.(string); ok {
+		Expect(string(buf.Bytes())).To(Equal(s))
+	} else {
+		Expect(buf.Bytes()).To(Equal(content))
+	}
 }
 
 func ExpectFileCreate(fs vfs.FileSystem, path string, content []byte, err error) {
@@ -97,10 +101,17 @@ func ExpectFileCreate(fs vfs.FileSystem, path string, content []byte, err error)
 	}
 }
 
-func ExpectFileWrite(fs vfs.FileSystem, path string, flags int, content []byte, check ...bool) {
+func ExpectFileWrite(fs vfs.FileSystem, path string, flags int, content interface{}, check ...bool) {
 	f, err := fs.OpenFile(path, flags|os.O_WRONLY, os.ModePerm)
 	Expect(err).To(Succeed())
-	n, err := f.Write(content)
+
+	var b []byte
+	if s, ok := content.(string); ok {
+		b = []byte(s)
+	} else {
+		b = content.([]byte)
+	}
+	n, err := f.Write(b)
 	Expect(err).To(Succeed())
 	Expect(n).To(Equal(n))
 	Expect(f.Close()).To(Succeed())
@@ -109,7 +120,7 @@ func ExpectFileWrite(fs vfs.FileSystem, path string, flags int, content []byte, 
 	}
 }
 
-func ExpectFileContent(fs vfs.FileSystem, path string, content []byte) {
+func ExpectFileContent(fs vfs.FileSystem, path string, content interface{}) {
 	f, err := fs.Open(path)
 	Expect(err).To(Succeed())
 	ExpectRead(f, content)
