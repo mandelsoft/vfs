@@ -22,13 +22,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mandelsoft/vfs/pkg/osfs"
 	"github.com/mandelsoft/vfs/pkg/utils"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
 type ComposedFileSystem struct {
 	*utils.MappedFileSystem
-	mounts map[string]vfs.FileSystem
+	mounts  map[string]vfs.FileSystem
+	tempdir string
 }
 
 type adapter struct {
@@ -57,14 +59,55 @@ func (a *adapter) MapPath(path string) (vfs.FileSystem, string) {
 	return mountfs, path[len(mountp):]
 }
 
-func New(root vfs.FileSystem) *ComposedFileSystem {
-	fs := &ComposedFileSystem{mounts: map[string]vfs.FileSystem{}}
+func New(root vfs.FileSystem, temp ...string) *ComposedFileSystem {
+	tempdir := "/"
+	if len(temp) > 0 && temp[0] != "" {
+		if vfs.IsAbs(nil, temp[0]) {
+			tempdir = temp[0]
+		} else {
+			tempdir = vfs.PathSeparatorString + temp[0]
+		}
+		tempdir = vfs.Trim(nil, tempdir)
+	}
+	fs := &ComposedFileSystem{mounts: map[string]vfs.FileSystem{}, tempdir: tempdir}
 	fs.MappedFileSystem = utils.NewMappedFileSystem(root, &adapter{fs})
 	return fs
 }
 
+func (c *ComposedFileSystem) Cleanup() error {
+	var err error
+	for _, m := range c.mounts {
+		terr := vfs.Cleanup(m)
+		if terr != nil {
+			err = terr
+		}
+	}
+	return err
+}
+
 func (c *ComposedFileSystem) Name() string {
 	return fmt.Sprintf("ComposedFileSystem [%s]", c.Base())
+}
+
+func (c *ComposedFileSystem) FSTempDir() string {
+	return c.tempdir
+}
+
+func (c *ComposedFileSystem) MountTempDir(path string) (string, error) {
+	if !vfs.IsAbs(nil, path) {
+		path = vfs.PathSeparatorString + path
+	}
+	path = vfs.Trim(nil, path)
+	dir, err := osfs.NewTempFileSystem()
+	if err == nil {
+		err = c.Mount(path, dir)
+	}
+	if err != nil {
+		vfs.Cleanup(dir)
+		return "", err
+	}
+	c.tempdir = path
+	return "", err
 }
 
 func (c *ComposedFileSystem) Mount(path string, fs vfs.FileSystem) error {

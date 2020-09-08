@@ -28,11 +28,10 @@ import (
 	"github.com/mandelsoft/vfs/pkg/memoryfs"
 	. "github.com/mandelsoft/vfs/pkg/test"
 	. "github.com/mandelsoft/vfs/pkg/vfs"
-	"github.com/mandelsoft/vfs/test/pkg/test"
 )
 
 var _ = Describe("filesystem", func() {
-	var fs *VFS
+	var fs VFS
 
 	BeforeEach(func() {
 		fs = New(memoryfs.New())
@@ -106,7 +105,7 @@ var _ = Describe("filesystem", func() {
 		Context("ReadFile", func() {
 			It("read existing file", func() {
 				content := []byte("This is a test")
-				test.ExpectCreateFile(fs, "f1", content, nil)
+				ExpectFileCreate(fs, "f1", content, nil)
 				result, err := ReadFile(fs, "f1")
 				Expect(err).To(Succeed())
 				Expect(result).To(Equal(content))
@@ -126,18 +125,18 @@ var _ = Describe("filesystem", func() {
 
 				file, err := fs.Open("f1")
 				Expect(err).To(Succeed())
-				test.ExpectRead(file, content)
+				ExpectRead(file, content)
 				Expect(file.Close()).To(Succeed())
 			})
 
 			It("overwrite existing file", func() {
 				content := []byte("Other")
-				test.ExpectCreateFile(fs, "f1", []byte("This is a test"), nil)
+				ExpectFileCreate(fs, "f1", []byte("This is a test"), nil)
 				Expect(WriteFile(fs, "f1", content, os.ModePerm)).To(Succeed())
 
 				file, err := fs.Open("f1")
 				Expect(err).To(Succeed())
-				test.ExpectRead(file, content)
+				ExpectRead(file, content)
 				Expect(file.Close()).To(Succeed())
 			})
 		})
@@ -160,8 +159,8 @@ var _ = Describe("filesystem", func() {
 	})
 
 	Context("eval sym links", func() {
-		var fs *VFS
-		var cwd *VFS
+		var fs VFS
+		var cwd VFS
 
 		BeforeEach(func() {
 			fs = New(memoryfs.New())
@@ -204,6 +203,37 @@ var _ = Describe("filesystem", func() {
 			Expect(EvalSymlinks(cwd, "d2/d3/link/..")).To(Equal(".."))
 			Expect(cwd.Symlink("d3/link/..", "/d1/d2/link")).To(Succeed())
 			Expect(EvalSymlinks(cwd, "d2/link/..")).To(Equal("../.."))
+		})
+	})
+	Context("temp", func() {
+		var fs VFS
+		temp := "/tmp"
+
+		BeforeEach(func() {
+			fs = New(memoryfs.New())
+			Expect(fs.Mkdir(temp, os.ModePerm)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Cleanup(fs)
+		})
+
+		It("tempfile", func() {
+			f, err := fs.TempFile(temp, "test-")
+			Expect(err).To(Succeed())
+			defer fs.Remove(f.Name())
+			Expect(f.WriteString("tempdata")).To(Equal(8))
+			Expect(f.Close()).To(Succeed())
+			ExpectFileContent(fs, f.Name(), "tempdata")
+		})
+
+		It("tempdir", func() {
+			path, err := fs.TempDir(temp, "test-")
+			Expect(err).To(Succeed())
+			defer fs.RemoveAll(path)
+			d := fs.Join(path, "d1")
+			Expect(fs.Mkdir(d, os.ModePerm)).To(Succeed())
+			ExpectFolders(fs, path, []string{"d1"}, nil)
 		})
 	})
 })

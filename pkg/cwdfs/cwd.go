@@ -75,6 +75,10 @@ func (w *WorkingDirectoryFileSystem) VolumeName(name string) string {
 	return w.base.VolumeName(name)
 }
 
+func (w *WorkingDirectoryFileSystem) FSTempDir() string {
+	return w.base.FSTempDir()
+}
+
 func (w *WorkingDirectoryFileSystem) Normalize(path string) string {
 	return w.base.Normalize(path)
 }

@@ -67,13 +67,17 @@ outer:
 				}
 				continue
 			}
-			fi, err := fs.Lstat(next)
+			p := next
+			if rooted {
+				p = PathSeparatorString + next
+			}
+			fi, err := fs.Lstat(p)
 			if err != nil {
 				if os.IsPermission(err) {
 					return "", err
 				}
 				if exist || !IsErrNotExist(err) {
-					return "", NewPathError("", next, err)
+					return "", NewPathError("", p, err)
 				}
 				dir = true
 				parsed = next

@@ -16,30 +16,16 @@
  *  limitations under the License.
  */
 
-package utils
+package osfs
 
 import (
-	"github.com/mandelsoft/vfs/pkg/vfs"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"testing"
 )
 
-type FileSystemBase struct{}
-
-func (FileSystemBase) VolumeName(name string) string {
-	return ""
-}
-
-func (FileSystemBase) FSTempDir() string {
-	return "/"
-}
-
-func (FileSystemBase) Normalize(path string) string {
-	return path
-}
-
-func (FileSystemBase) Getwd() (string, error) {
-	return vfs.PathSeparatorString, nil
-}
-
-func (FileSystemBase) Cleanup() error {
-	return nil
+func TestNodes(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "OS File System Suite")
 }

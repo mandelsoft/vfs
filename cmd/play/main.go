@@ -16,30 +16,26 @@
  *  limitations under the License.
  */
 
-package utils
+package main
 
 import (
-	"github.com/mandelsoft/vfs/pkg/vfs"
+	"fmt"
+	"os"
+	"reflect"
 )
 
-type FileSystemBase struct{}
-
-func (FileSystemBase) VolumeName(name string) string {
-	return ""
-}
-
-func (FileSystemBase) FSTempDir() string {
-	return "/"
-}
-
-func (FileSystemBase) Normalize(path string) string {
-	return path
-}
-
-func (FileSystemBase) Getwd() (string, error) {
-	return vfs.PathSeparatorString, nil
-}
-
-func (FileSystemBase) Cleanup() error {
-	return nil
+func main() {
+	fi, err := os.Open("/lib/cpp2")
+	if err != nil {
+		fmt.Printf("open: %s(%s)\n", reflect.TypeOf(err), err)
+		os.Exit(1)
+	}
+	names, err := fi.Readdirnames(0)
+	if err != nil {
+		fmt.Printf("dir: %s(%s)\n", reflect.TypeOf(err), err)
+		os.Exit(1)
+	}
+	for _, n := range names {
+		fmt.Printf("%s\n", n)
+	}
 }
