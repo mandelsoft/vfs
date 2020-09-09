@@ -24,6 +24,8 @@ github.com/mandelsoft/filepath v0.0.0-20200906144341-f6f7308759ed h1:yu9MpVjXEvf
 github.com/mandelsoft/filepath v0.0.0-20200906144341-f6f7308759ed/go.mod h1:n4xEiUD2HNHnn2w5ZKF0qgjDecHVCWAl5DxZ7+pcFU8=
 github.com/mandelsoft/filepath v0.0.0-20200908104906-2d4df9739918 h1:bK6zU2n99z3vZo4gKOiUs5sG4sLCkYEetGVmPphv8k0=
 github.com/mandelsoft/filepath v0.0.0-20200908104906-2d4df9739918/go.mod h1:n4xEiUD2HNHnn2w5ZKF0qgjDecHVCWAl5DxZ7+pcFU8=
+github.com/mandelsoft/filepath v0.0.0-20200909114706-3df73d378d55 h1:mFdiUG86O2iW+iDEpZKXf64efMWO4JvDT+zN3znUGIc=
+github.com/mandelsoft/filepath v0.0.0-20200909114706-3df73d378d55/go.mod h1:n4xEiUD2HNHnn2w5ZKF0qgjDecHVCWAl5DxZ7+pcFU8=
 github.com/nxadm/tail v1.4.4 h1:DQuhQpB1tVlglWS2hLQ5OV6B5r8aGxSrPc5Qo6uTN78=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
