@@ -46,6 +46,8 @@ const typeSYMLINK = "symlink"
 const typeYAML = "yaml"
 const typeJSON = "json"
 
+var UseStandardYAMLBinary = true
+
 func validType(t string) bool {
 	switch t {
 	case typeDIR, typeSYMLINK, typeYAML, typeJSON:
@@ -345,13 +347,17 @@ func ToBinary(data interface{}) []byte {
 			return []byte(err.Error())
 		}
 		return d
+	case []byte:
+		return e
 	default:
 		return []byte(fmt.Sprintf("%s", e))
-
 	}
 }
 
 func FromBinary(data []byte) interface{} {
+	if UseStandardYAMLBinary {
+		return string(data)
+	}
 	b := base64.StdEncoding.EncodeToString(data)
 	n := "\n"
 	for len(b) > 120 {

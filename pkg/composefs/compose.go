@@ -107,7 +107,20 @@ func (c *ComposedFileSystem) MountTempDir(path string) (string, error) {
 		return "", err
 	}
 	c.tempdir = path
-	return "", err
+	return path, err
+}
+
+func (c *ComposedFileSystem) MountTempFileSysten(path string, fs vfs.FileSystem) (string, error) {
+	if !vfs.IsAbs(nil, path) {
+		path = vfs.PathSeparatorString + path
+	}
+	path = vfs.Trim(nil, path)
+	err := c.Mount(path, fs)
+	if err != nil {
+		return "", err
+	}
+	c.tempdir = path
+	return path, err
 }
 
 func (c *ComposedFileSystem) Mount(path string, fs vfs.FileSystem) error {

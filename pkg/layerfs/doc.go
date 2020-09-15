@@ -16,36 +16,7 @@
  *  limitations under the License.
  */
 
-package main
-
-import (
-	"fmt"
-	"reflect"
-
-	"gopkg.in/yaml.v2"
-)
-
-func Error(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func main() {
-	in := `
-data: !!binary |
-  VGhpcyBpcyBhIGRlY29kZWQgdGVzdAo=
-`
-
-	s := map[interface{}]interface{}{}
-	err := yaml.Unmarshal([]byte(in), s)
-	Error(err)
-
-	fmt.Printf("%d\n", len(s))
-	fmt.Printf("DATA: %s: %s\n", reflect.TypeOf(s["data"]), s["data"])
-
-	s["data"] = string([]byte{255, 255})
-	b, err := yaml.Marshal(s)
-	Error(err)
-	fmt.Printf("RESULT:\n%s\n", b)
-}
+// Package layerfs provides a virtual filesystem supporting a filesytem layer
+// on top of a base filesystem, that is used to keep track of all changes
+// done to the filesystem. Thereby the root filesystem is not changed.
+package layerfs

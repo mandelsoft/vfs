@@ -44,6 +44,8 @@ d1:
         ---Start Binary---
         VGhpcyBpcyBhIGRlY29kZWQgdGVzdAo=
         ---End Binary---
+    f3: !!binary |
+        VGhpcyBpcyBhIGRlY29kZWQgdGVzdAo=
     yaml:
       $type: yaml
       value: 
@@ -74,7 +76,7 @@ d1:
 		})
 		It("other dirs", func() {
 			ExpectFolders(fs, "/d1", []string{"d2"}, nil)
-			ExpectFolders(fs, "/d1/d2", []string{"f1", "f2", "json", "yaml"}, nil)
+			ExpectFolders(fs, "/d1/d2", []string{"f1", "f2", "f3", "json", "yaml"}, nil)
 		})
 		It("read", func() {
 			ExpectFileContent(fs, "/d1/d2/f1", "This is a test")
@@ -87,10 +89,9 @@ d1:
 			ExpectFileContent(fs, "/d1/d2/json", "{\"list\":[\"a\",\"b\"],\"map\":{\"field\":\"value\"}}")
 		})
 
-		It("write", func() {
+		It("write json", func() {
 			ExpectFileWrite(fs, "/d1/d2/json", os.O_TRUNC, "{\"list\":[\"c\",\"d\"]}", true)
 			d, err := fs.Data()
-			Expect(err).To(Succeed())
 			Expect(string(d)).To(Equal(`d1:
   d2:
     f1: This is a test
@@ -100,6 +101,8 @@ d1:
         ---Start Binary---
         VGhpcyBpcyBhIGRlY29kZWQgdGVzdAo=
         ---End Binary---
+    f3: |
+      This is a decoded test
     json:
       $type: json
       value:
@@ -115,7 +118,42 @@ d1:
         map:
           field: value
 `))
+			Expect(err).To(Succeed())
 		})
+
+		It("write binary", func() {
+			ExpectFileWrite(fs, "/d1/d2/f3", os.O_TRUNC, []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 255}, true)
+			d, err := fs.Data()
+			Expect(err).To(Succeed())
+			Expect(string(d)).To(Equal(`d1:
+  d2:
+    f1: This is a test
+    f2:
+      $type: file
+      value: |
+        ---Start Binary---
+        VGhpcyBpcyBhIGRlY29kZWQgdGVzdAo=
+        ---End Binary---
+    f3: !!binary AQIDBAUGBwgJCv8=
+    json:
+      $type: json
+      value:
+        list:
+        - a
+        - b
+        map:
+          field: value
+    yaml:
+      $type: yaml
+      value:
+        list:
+        - a
+        - b
+        map:
+          field: value
+`))
+		})
+
 	})
 
 	Context("standard", func() {
