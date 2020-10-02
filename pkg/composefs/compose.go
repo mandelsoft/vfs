@@ -135,6 +135,11 @@ func (c *ComposedFileSystem) Mount(path string, fs vfs.FileSystem) error {
 	if !fi.IsDir() {
 		return fmt.Errorf("mount failed: mount point %s must be dir", mountp)
 	}
+	for p := range c.mounts {
+		if p == mountp || strings.Contains(p, mountp+vfs.PathSeparatorString) {
+			delete(c.mounts, p)
+		}
+	}
 	c.mounts[mountp] = fs
 	return nil
 }

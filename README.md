@@ -55,7 +55,6 @@ the package `os` by the instance of the virtual filesystem.
     return nil, err
   }
   defer f.Close()
-  vfs.ReadFile()
   return ioutil.ReadAll(f)
 ```
 
