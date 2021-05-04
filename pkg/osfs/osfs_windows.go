@@ -26,7 +26,7 @@ import (
 
 func mapPath(p string) string {
 	mapped := ""
-	for c := range p {
+	for _, c := range p {
 		if os.PathSeparator == c {
 			mapped = mapped + string(vfs.PathSeparatorChar)
 		} else {
