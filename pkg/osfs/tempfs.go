@@ -31,6 +31,8 @@ type tempfs struct {
 	dir string
 }
 
+var _ vfs.FileSystemCleanup = (*tempfs)(nil)
+
 func NewTempFileSystem() (vfs.FileSystem, error) {
 	dir, err := ioutil.TempDir("", "VFS-")
 	if err != nil {
@@ -43,6 +45,6 @@ func NewTempFileSystem() (vfs.FileSystem, error) {
 	return &tempfs{fs, dir}, err
 }
 
-func (t *tempfs) Cleanup() {
-	os.RemoveAll(t.dir)
+func (t *tempfs) Cleanup() error {
+	return os.RemoveAll(t.dir)
 }

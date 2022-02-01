@@ -27,6 +27,10 @@ import (
 const PathSeparatorChar = '/'
 const PathSeparatorString = "/"
 
+type FileMode = os.FileMode
+
+const ModePerm = os.ModePerm
+
 type FileSystem interface {
 
 	// VolumeName returns leading volume name.
