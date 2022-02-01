@@ -31,6 +31,30 @@ type FileMode = os.FileMode
 
 const ModePerm = os.ModePerm
 
+// Flags to OpenFile wrapping those of the underlying system. Not all
+// flags may be implemented on a given system.
+const (
+	// Exactly one of O_RDONLY, O_WRONLY, or O_RDWR must be specified.
+	O_RDONLY = os.O_RDONLY // open the file read-only.
+	O_WRONLY = os.O_WRONLY // open the file write-only.
+	O_RDWR   = os.O_RDWR   // open the file read-write.
+	// The remaining values may be or'ed in to control behavior.
+	O_APPEND = os.O_APPEND // append data to the file when writing.
+	O_CREATE = os.O_CREATE // create a new file if none exists.
+	O_EXCL   = os.O_EXCL   // used with O_CREATE, file must not exist.
+	O_SYNC   = os.O_SYNC   // open for synchronous I/O.
+	O_TRUNC  = os.O_TRUNC  // truncate regular writable file when opened.
+)
+
+// Seek whence values.
+//
+// Deprecated: Use io.SeekStart, io.SeekCurrent, and io.SeekEnd.
+const (
+	SEEK_SET = io.SeekStart   // seek relative to the origin of the file
+	SEEK_CUR = io.SeekCurrent // seek relative to the current offset
+	SEEK_END = io.SeekEnd     // seek relative to the end
+)
+
 type FileSystem interface {
 
 	// VolumeName returns leading volume name.
