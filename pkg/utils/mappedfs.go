@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Mandelsoft. All rights reserved.
+ * Copyright 2022 Mandelsoft. All rights reserved.
  *  This file is licensed under the Apache Software License, v. 2 except as noted
  *  otherwise in the LICENSE file
  *
@@ -95,7 +95,7 @@ func (m *MappedFileSystem) mapPath(path string, link ...bool) (vfs.FileSystem, s
 		case ".", "":
 			continue
 		case "..":
-			r, b = vfs.Split(m.base, r)
+			r, _ = vfs.Split(m.base, r)
 			if r == "" {
 				r = "/"
 			}

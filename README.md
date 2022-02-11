@@ -1,4 +1,10 @@
+
 ## VFS - A Virtual Filesystem for GO
+
+
+[![CI Build status](https://app.travis-ci.com/mandelsoft/vfs.svg?branch=master)](https://app.travis-ci.com/github/mandelsoft/vfs)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mandelsoft/vfs)](https://goreportcard.com/report/github.com/mandelsoft/vfs)
+
 
 A virtual filesystem enables programs to transparently work on any kind
 of filesystem-like data source besides the real operating system filesystem

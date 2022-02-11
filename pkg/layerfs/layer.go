@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Mandelsoft. All rights reserved.
+ * Copyright 2022 Mandelsoft. All rights reserved.
  *  This file is licensed under the Apache Software License, v. 2 except as noted
  *  otherwise in the LICENSE file
  *
@@ -126,7 +126,7 @@ func (l *LayerFileSystem) create(name string, fn func(path string, deleted bool)
 
 	path := vfs.Join(l.layer, parent.path, n)
 	// entry was formerly deleted from layer, if
-	// - it is explicilty maked as deleted
+	// - it is explicitly marked as deleted
 	// - the complete base folder content is marked as deleted AND the base layer contains the entry
 	del := vfs.Join(l.layer, parent.path, del_prefix+n)
 	deleted, _ := vfs.Exists(l.layer, del)

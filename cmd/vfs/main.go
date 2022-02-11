@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Mandelsoft. All rights reserved.
+ * Copyright 2022 Mandelsoft. All rights reserved.
  *  This file is licensed under the Apache Software License, v. 2 except as noted
  *  otherwise in the LICENSE file
  *
@@ -104,11 +104,11 @@ func main() {
 		Error(fmt.Errorf("read 1 failed: %d %q", n, string(buf[:n])))
 	}
 	n, err = f.Read(buf[:])
+	Assert(err)
 	if n != 5 && string(buf[:n]) != "test\n" {
 		Error(fmt.Errorf("read 2 failed: %d %q", n, string(buf[:n])))
 	}
 	f.Close()
-	list(wdfs, "d")
 	list(wdfs, "pkg")
 
 }
