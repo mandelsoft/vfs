@@ -16,11 +16,13 @@
  *  limitations under the License.
  */
 
-package projectionfs
+package projectionfs_test
 
 import (
 	"os"
 
+	"github.com/mandelsoft/vfs/pkg/osfs"
+	"github.com/mandelsoft/vfs/pkg/projectionfs"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -30,22 +32,21 @@ import (
 )
 
 var _ = Describe("projection filesystem", func() {
-	var fs vfs.FileSystem
-	var mem vfs.FileSystem
-
-	BeforeEach(func() {
-		var err error
-
-		mem = memoryfs.New()
-
-		mem.MkdirAll("d1/d1d1/d1d1d1/a", os.ModePerm)
-		mem.MkdirAll("d1/d1d1/d1d1d2/b", os.ModePerm)
-		mem.MkdirAll("d2/d2d1", os.ModePerm)
-		fs, err = New(mem, "d1")
-		Expect(err).To(Succeed())
-	})
-
 	Context("plain", func() {
+		var fs vfs.FileSystem
+		var mem vfs.FileSystem
+
+		BeforeEach(func() {
+			var err error
+
+			mem = memoryfs.New()
+
+			mem.MkdirAll("d1/d1d1/d1d1d1/a", os.ModePerm)
+			mem.MkdirAll("d1/d1d1/d1d1d2/b", os.ModePerm)
+			mem.MkdirAll("d2/d2d1", os.ModePerm)
+			fs, err = projectionfs.New(mem, "d1")
+			Expect(err).To(Succeed())
+		})
 
 		It("root", func() {
 			ExpectFolders(fs, "/", []string{"d1d1"}, nil)
@@ -87,6 +88,27 @@ var _ = Describe("projection filesystem", func() {
 			fi, err := fs.Lstat("d1d1/link")
 			Expect(err).To(Succeed())
 			Expect(fi.Mode() & (os.ModeType)).To(Equal(os.ModeSymlink))
+		})
+	})
+
+	Context("tempfs", func() {
+		var tempfs vfs.FileSystem
+
+		BeforeEach(func() {
+			t, err := osfs.NewTempFileSystem()
+			Expect(err).To(Succeed())
+			tempfs = t
+		})
+
+		AfterEach(func() {
+			vfs.Cleanup(tempfs)
+		})
+
+		It("handles permission problem", func() {
+			Expect(tempfs.Mkdir("test", 0)).To(Succeed())
+			err := tempfs.Mkdir("test/sub", 0)
+			Expect(err).To(HaveOccurred())
+			Expect(os.IsPermission(err)).To(BeTrue())
 		})
 	})
 })

@@ -109,7 +109,7 @@ func (m *MappedFileSystem) mapPath(path string, link ...bool) (vfs.FileSystem, s
 			if err != nil && !os.IsPermission(err) {
 				return nil, "", "", err
 			}
-			if fi.Mode()&os.ModeSymlink != 0 && (getlink || strings.Contains(path, vfs.PathSeparatorString)) {
+			if (fi != nil && fi.Mode()&os.ModeSymlink != 0) && (getlink || strings.Contains(path, vfs.PathSeparatorString)) {
 				links++
 				if links > 255 {
 					return nil, "", "", errors.New("AbsPath: too many links")
