@@ -190,7 +190,13 @@ func Trim(fs FileSystem, path string) string {
 // IsAbs return true if the given path is an absolute one
 // starting with a Separator or is quailified by a volume name.
 func IsAbs(fs FileSystem, path string) bool {
-	_, path = SplitVolume(fs, path)
+	if fs != nil {
+		_, path = SplitVolume(fs, path)
+	} else {
+		if strings.HasPrefix(path, string(os.PathSeparator)) {
+			return true
+		}
+	}
 	return strings.HasPrefix(path, PathSeparatorString)
 }
 

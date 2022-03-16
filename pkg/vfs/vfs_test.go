@@ -50,6 +50,10 @@ var _ = Describe("filesystem", func() {
 			Expect(fs.Base("/path/base/.")).To(Equal("."))
 		})
 
+		It("anonymous", func() {
+			Expect(IsAbs(nil, "/")).To(BeTrue())
+		})
+
 		It("dir/base combinations", func() {
 			parts := []string{"file", "/", ".", ".."}
 			type check func([]string)
