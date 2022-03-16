@@ -162,7 +162,7 @@ type File interface {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type VFS interface {
-	FileSystem
+	FileSystemCleanup
 
 	Join(elems ...string) string
 	Split(path string) (string, string)
@@ -181,6 +181,7 @@ type VFS interface {
 	Walk(path string, fn WalkFunc) error
 
 	Exists(path string) (bool, error)
+	FileExists(path string) (bool, error)
 	DirExists(path string) (bool, error)
 	IsDir(path string) (bool, error)
 	IsFile(path string) (bool, error)

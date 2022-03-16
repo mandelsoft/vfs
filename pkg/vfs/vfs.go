@@ -128,3 +128,7 @@ func (fs *vfs) TempFile(dir, prefix string) (File, error) {
 func (fs *vfs) TempDir(dir, prefix string) (string, error) {
 	return TempDir(fs, dir, prefix)
 }
+
+func (fs *vfs) Cleanup() error {
+	return Cleanup(fs.FileSystem)
+}
