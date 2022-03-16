@@ -82,6 +82,10 @@ func (c *ComposedFileSystem) Cleanup() error {
 			err = terr
 		}
 	}
+	terr := c.MappedFileSystem.Cleanup()
+	if terr != nil {
+		return terr
+	}
 	return err
 }
 

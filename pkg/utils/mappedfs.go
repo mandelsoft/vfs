@@ -42,6 +42,13 @@ func NewMappedFileSystem(root vfs.FileSystem, mapper PathMapper) *MappedFileSyst
 	return &MappedFileSystem{mapper: mapper, base: root}
 }
 
+func (m *MappedFileSystem) Cleanup() error {
+	if m != nil {
+		return vfs.Cleanup(m.base)
+	}
+	return nil
+}
+
 func (m *MappedFileSystem) Base() vfs.FileSystem {
 	return m.base
 }
