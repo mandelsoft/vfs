@@ -244,7 +244,7 @@ func (m *MappedFileSystem) MkdirAll(name string, mode os.FileMode) (err error) {
 
 	r := ""
 	for _, dir := range elems {
-		r = vfs.PathSeparatorString + dir
+		r += vfs.PathSeparatorString + dir
 		fs, l, r, err := m.mapPath(r)
 		if err != nil {
 			return &os.PathError{Op: "mkdir", Path: name, Err: err}
