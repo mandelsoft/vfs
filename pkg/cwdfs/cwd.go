@@ -46,7 +46,7 @@ func New(base vfs.FileSystem, path string) (vfs.FileSystemWithWorkingDirectory, 
 		return nil, &os.PathError{Op: "readdir", Path: path, Err: errors.New("not a dir")}
 	}
 	if old, ok := base.(*WorkingDirectoryFileSystem); ok {
-		base = old
+		base = old.base
 	}
 	return &WorkingDirectoryFileSystem{base, base.VolumeName(real), real}, nil
 }
