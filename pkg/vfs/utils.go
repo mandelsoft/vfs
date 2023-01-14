@@ -268,7 +268,14 @@ func Abs(fs FileSystem, path string) (string, error) {
 	return Join(fs, p, path), nil
 }
 
+// Rel determines the relative path from a source folder
+// to a target file.
 func Rel(fs FileSystem, src, tgt string) (string, error) {
+	if ok, _ := Exists(fs, src); ok {
+		if ok, _ := IsDir(fs, src); !ok {
+			return "", ErrNotDir
+		}
+	}
 	s, err := Canonical(fs, src, false)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", src, err)
@@ -305,13 +312,15 @@ func Rel(fs FileSystem, src, tgt string) (string, error) {
 	return Join(fs, sseq[is:]...), nil
 }
 
+// Components splits a path into its volume part and a list
+// of path components.
 func Components(fs FileSystem, p string) (string, []string) {
 	var seq []string
 	var b string
 
 	v, p := SplitVolume(fs, p)
 
-	for !IsRoot(fs, p) {
+	for p != "" && !IsRoot(fs, p) {
 		p, b = Split(fs, p)
 		seq = append(seq, b)
 	}

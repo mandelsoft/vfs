@@ -16,7 +16,9 @@
  *  limitations under the License.
  */
 
-// Package layerfs provides a virtual filesystem supporting a filesystem layer
-// on top of a base filesystem, that is used to keep track of all changes
-// done to the filesystem. Thereby the root filesystem is not changed.
-package layerfs
+// Package vfs provides a virtual filesystem for GO. It is the main package
+// providing the abstract interfaces and implementation-agnostic
+// utility functions wrapped together with an implementation into a
+// comprehensive user interface VFS.
+// (see https://pkg.go.dev/github.com/mandelsoft/vfs)
+package vfs
