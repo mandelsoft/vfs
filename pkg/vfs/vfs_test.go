@@ -160,6 +160,29 @@ var _ = Describe("filesystem", func() {
 			})
 		})
 
+		Context("Rel", func() {
+			It("sub path", func() {
+				Expect(fs.Rel("/", "/sub")).To(Equal("sub"))
+				Expect(fs.Rel("/", "/sub/dir")).To(Equal("sub/dir"))
+				Expect(fs.Rel("/", "/sub/dir/file")).To(Equal("sub/dir/file"))
+				Expect(fs.Rel("sub", "sub/dir")).To(Equal("dir"))
+				Expect(fs.Rel("sub", "sub/dir/file")).To(Equal("dir/file"))
+			})
+
+			It("parent path", func() {
+				Expect(fs.Rel("/sub", "/")).To(Equal(".."))
+				Expect(fs.Rel("/sub/dir", "/")).To(Equal("../.."))
+				Expect(fs.Rel("/sub/dir/file", "/")).To(Equal("../../.."))
+				Expect(fs.Rel("sub/dir", "sub")).To(Equal(".."))
+				Expect(fs.Rel("sub/dir/file", "sub")).To(Equal("../.."))
+			})
+
+			It("common parent", func() {
+				Expect(fs.Rel("/sub/dir", "/sub/file")).To(Equal("../file"))
+				Expect(fs.Rel("/sub/dir/file", "/sub/dir2/file")).To(Equal("../../dir2/file"))
+			})
+
+		})
 	})
 
 	Context("eval sym links", func() {

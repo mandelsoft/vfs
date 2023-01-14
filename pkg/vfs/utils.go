@@ -21,6 +21,7 @@ package vfs
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -60,12 +61,12 @@ func Join(fs FileSystem, elems ...string) string {
 // by purely lexical processing. It applies the following rules
 // iteratively until no further processing can be done:
 //
-//	1. Replace multiple path separators with a single one.
-//	2. Eliminate each . path name element (the current directory).
-//	3. Eliminate each inner .. path name element (the parent directory)
-//	   along with the non-.. element that precedes it.
-//	4. Eliminate .. elements that begin a rooted path:
-//	   that is, replace "/.." by "/" at the beginning of a path.
+//  1. Replace multiple path separators with a single one.
+//  2. Eliminate each . path name element (the current directory).
+//  3. Eliminate each inner .. path name element (the parent directory)
+//     along with the non-.. element that precedes it.
+//  4. Eliminate .. elements that begin a rooted path:
+//     that is, replace "/.." by "/" at the beginning of a path.
 //
 // The returned path ends in a slash only if it is the root "/".
 //
@@ -265,6 +266,59 @@ func Abs(fs FileSystem, path string) (string, error) {
 		return "", err
 	}
 	return Join(fs, p, path), nil
+}
+
+func Rel(fs FileSystem, src, tgt string) (string, error) {
+	s, err := Canonical(fs, src, false)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", src, err)
+	}
+
+	t, err := Canonical(fs, tgt, false)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", tgt, err)
+	}
+
+	vs, sseq := Components(fs, s)
+	vt, tseq := Components(fs, t)
+	if vs != vt {
+		return "", fmt.Errorf("different volumes")
+	}
+
+	if s == t {
+		return ".", nil
+	}
+	var is int
+	for is = 0; is < len(sseq); is++ {
+		if len(tseq) <= is || tseq[is] != sseq[is] {
+			break
+		}
+	}
+
+	for i := is; i < len(sseq); i++ {
+		sseq[i] = ".."
+	}
+
+	if is < len(tseq) {
+		return Join(fs, append(sseq[is:], tseq[is:]...)...), nil
+	}
+	return Join(fs, sseq[is:]...), nil
+}
+
+func Components(fs FileSystem, p string) (string, []string) {
+	var seq []string
+	var b string
+
+	v, p := SplitVolume(fs, p)
+
+	for !IsRoot(fs, p) {
+		p, b = Split(fs, p)
+		seq = append(seq, b)
+	}
+	for i := 0; i < len(seq)/2; i++ {
+		seq[i], seq[len(seq)-i-1] = seq[len(seq)-i-1], seq[i]
+	}
+	return v, seq
 }
 
 // Split splits path immediately following the final Separator,

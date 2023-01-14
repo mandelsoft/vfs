@@ -166,6 +166,7 @@ type VFS interface {
 
 	Join(elems ...string) string
 	Split(path string) (string, string)
+	Components(path string) (string, []string)
 	Base(path string) string
 	Dir(path string) string
 	Clean(path string) string
@@ -177,6 +178,7 @@ type VFS interface {
 
 	Canonical(path string, exist bool) (string, error)
 	Abs(path string) (string, error)
+	Rel(src, tgt string) (string, error)
 	EvalSymlinks(path string) (string, error)
 	Walk(path string, fn WalkFunc) error
 
