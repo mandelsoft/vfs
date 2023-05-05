@@ -36,9 +36,27 @@ type LayerFileSystem struct {
 	base  vfs.FileSystem
 }
 
+var _ vfs.FileSystemCleanup = (*LayerFileSystem)(nil)
+
 func New(layer, base vfs.FileSystem) vfs.FileSystem {
 	fs := &LayerFileSystem{layer: layer, base: base}
 	return fs
+}
+
+func (l *LayerFileSystem) Cleanup() error {
+	err := vfs.Cleanup(l.layer)
+	err2 := vfs.Cleanup(l.base)
+
+	if err == nil {
+		if err2 != nil {
+			return err2
+		}
+	} else {
+		if err2 != nil {
+			return fmt.Errorf("error cleaning layer: layer %s, base %s", err2.Error(), err.Error())
+		}
+	}
+	return err
 }
 
 func (l *LayerFileSystem) Name() string {
