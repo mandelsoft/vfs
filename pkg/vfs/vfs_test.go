@@ -28,6 +28,7 @@ import (
 	"github.com/mandelsoft/vfs/pkg/memoryfs"
 	. "github.com/mandelsoft/vfs/pkg/test"
 	. "github.com/mandelsoft/vfs/pkg/vfs"
+	"github.com/mandelsoft/vfs/pkg/yamlfs"
 )
 
 var _ = Describe("filesystem", func() {
@@ -68,7 +69,7 @@ var _ = Describe("filesystem", func() {
 			}
 			level(level(level(level(func(segments []string) {
 				path := Join(nil, segments...)
-				//fmt.Printf("trimming %+v:  %q\n", segments, path)
+				// fmt.Printf("trimming %+v:  %q\n", segments, path)
 				Expect(Trim(nil, Join(nil, Dir(nil, path), Base(nil, path)))).To(Equal(Trim(nil, path)))
 			}))))([]string{})
 
@@ -261,6 +262,71 @@ var _ = Describe("filesystem", func() {
 			d := fs.Join(path, "d1")
 			Expect(fs.Mkdir(d, os.ModePerm)).To(Succeed())
 			ExpectFolders(fs, path, []string{"d1"}, nil)
+		})
+	})
+
+	Context("walk", func() {
+		var fs *yamlfs.YamlFileSystem
+
+		content := `
+d1:
+  a: This is d1a
+  d2:
+    a: This is file d2a
+    d3:
+      a: This is file d3a
+    z: This is file d2z
+  z: This is file d1z
+`
+		fs, err := yamlfs.New([]byte(content))
+		if err != nil {
+			Fail("invalid yaml fs: %s" + err.Error())
+		}
+
+		var order []string
+
+		BeforeEach(func() {
+			order = nil
+		})
+
+		It("walks fs", func() {
+			catch := func(path string, info FileInfo, err error) error {
+				order = append(order, path)
+				return nil
+			}
+			Expect(Walk(fs, "", catch)).To(Succeed())
+			Expect(order).To(Equal([]string{
+				"",
+				"d1",
+				"d1/a",
+				"d1/d2",
+				"d1/d2/a",
+				"d1/d2/d3",
+				"d1/d2/d3/a",
+				"d1/d2/z",
+				"d1/z",
+			}))
+		})
+
+		It("walks fs", func() {
+			catch := func(path string, info FileInfo, err error) error {
+				order = append(order, path)
+				if path == "d1/d2/d3" {
+					return SkipDir
+				}
+				return nil
+			}
+			Expect(Walk(fs, "", catch)).To(Succeed())
+			Expect(order).To(Equal([]string{
+				"",
+				"d1",
+				"d1/a",
+				"d1/d2",
+				"d1/d2/a",
+				"d1/d2/d3",
+				"d1/d2/z",
+				"d1/z",
+			}))
 		})
 	})
 })

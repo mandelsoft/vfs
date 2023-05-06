@@ -28,6 +28,7 @@ const PathSeparatorChar = '/'
 const PathSeparatorString = "/"
 
 type FileMode = os.FileMode
+type FileInfo = os.FileInfo
 
 const ModePerm = os.ModePerm
 
