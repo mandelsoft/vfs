@@ -102,6 +102,15 @@ var _ = Describe("projection filesystem", func() {
 			proFs, _ := projectionfs.New(osfs.OsFs, "/")
 			Expect(vfs.DirExists(proFs, "/bar/baz")).To(BeFalse())
 		})
+
+		It("provides single root", func() {
+			Expect(projectionfs.Root(fs)).To(Equal("/d1"))
+		})
+		It("provides nested root", func() {
+			nested, err := projectionfs.New(fs, "/d1d1")
+			Expect(err).To(Succeed())
+			Expect(projectionfs.Root(nested)).To(Equal("/d1/d1d1"))
+		})
 	})
 
 	Context("tempfs", func() {
