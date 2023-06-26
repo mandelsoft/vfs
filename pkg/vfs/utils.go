@@ -396,7 +396,7 @@ func DirExists(fs FileSystem, path string) (bool, error) {
 	if err == nil && fi.IsDir() {
 		return true, nil
 	}
-	if os.IsNotExist(err) {
+	if IsNotExist(err) {
 		return false, nil
 	}
 	return false, err
@@ -408,7 +408,7 @@ func FileExists(fs FileSystem, path string) (bool, error) {
 	if err == nil && fi.Mode()&os.ModeType == 0 {
 		return true, nil
 	}
-	if os.IsNotExist(err) {
+	if IsNotExist(err) {
 		return false, nil
 	}
 	return false, err

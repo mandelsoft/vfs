@@ -89,6 +89,19 @@ var _ = Describe("projection filesystem", func() {
 			Expect(err).To(Succeed())
 			Expect(fi.Mode() & (os.ModeType)).To(Equal(os.ModeSymlink))
 		})
+
+		It("stat non existing", func() {
+			_, err := fs.Stat("/d1d1/none/none")
+			Expect(vfs.IsNotExist(err)).To(BeTrue())
+			Expect(vfs.DirExists(fs, "/d1d1/none/none")).To(BeFalse())
+		})
+
+		It("stat non existing2", func() {
+			Expect(vfs.DirExists(osfs.OsFs, "/bar/baz")).To(BeFalse())
+
+			proFs, _ := projectionfs.New(osfs.OsFs, "/")
+			Expect(vfs.DirExists(proFs, "/bar/baz")).To(BeFalse())
+		})
 	})
 
 	Context("tempfs", func() {
