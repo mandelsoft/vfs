@@ -103,6 +103,13 @@ var _ = Describe("projection filesystem", func() {
 			Expect(vfs.DirExists(proFs, "/bar/baz")).To(BeFalse())
 		})
 
+		It("stat non existing2", func() {
+			Expect(vfs.Exists(osfs.OsFs, "/bar/baz")).To(BeFalse())
+
+			proFs, _ := projectionfs.New(osfs.OsFs, "/")
+			Expect(vfs.Exists(proFs, "/bar/baz")).To(BeFalse())
+		})
+
 		It("provides single root", func() {
 			Expect(projectionfs.Root(fs)).To(Equal("/d1"))
 		})
