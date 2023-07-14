@@ -59,6 +59,35 @@ var _ = Describe("memory filesystem", func() {
 			Expect(fs.Rename("/d1/d1n1", "d1/d1n2")).To(Equal(os.ErrExist))
 		})
 
+		It("recreate", func() {
+			f, err := fs.Create("create")
+			Expect(err).To(Succeed())
+			n, err := f.Write([]byte("test data"))
+			Expect(err).To(Succeed())
+			Expect(n).To(Equal(9))
+			Expect(f.Close()).To(Succeed())
+
+			f, err = fs.Create("create")
+			Expect(err).To(Succeed())
+			n, err = f.Write([]byte("other"))
+			Expect(err).To(Succeed())
+			Expect(n).To(Equal(5))
+			Expect(f.Close()).To(Succeed())
+
+			fi, err := fs.Stat("create")
+			Expect(err).To(Succeed())
+			Expect(fi.Size()).To(Equal(int64(5)))
+
+			f, err = fs.Open("create")
+			Expect(err).To(Succeed())
+
+			buf := [20]byte{}
+			n, err = f.Read(buf[:])
+			Expect(err).To(Succeed())
+			Expect(n).To(Equal(5))
+			Expect(string(buf[:5])).To(Equal("other"))
+		})
+
 		It("rename link", func() {
 			Expect(fs.MkdirAll("d2", os.ModePerm)).To(Succeed())
 			Expect(fs.Symlink("/d1/d1n1", "d2/link")).To(Succeed())
