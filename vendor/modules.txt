@@ -1,8 +1,8 @@
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
-# github.com/mandelsoft/filepath v0.0.0-20200909114706-3df73d378d55
-## explicit; go 1.14
+# github.com/mandelsoft/filepath v0.0.0-20240223090642-3e2777258aa3
+## explicit; go 1.19
 github.com/mandelsoft/filepath/pkg/filepath
 # github.com/nxadm/tail v1.4.4
 ## explicit; go 1.13
