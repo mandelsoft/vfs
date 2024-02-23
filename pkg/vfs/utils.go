@@ -202,7 +202,7 @@ func IsAbs(fs FileSystem, path string) bool {
 // a volume name.
 func IsRoot(fs FileSystem, path string) bool {
 	_, path = SplitVolume(fs, path)
-	return path == PathSeparatorString
+	return len(path) == 1 && isSlash(path[0])
 }
 
 func SplitVolume(fs FileSystem, path string) (string, string) {
