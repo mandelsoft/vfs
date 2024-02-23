@@ -27,8 +27,6 @@ import (
 	"path"
 	"sort"
 	"strings"
-
-	"github.com/mandelsoft/filepath/pkg/filepath"
 )
 
 func filesys(fs ...FileSystem) FileSystem {
@@ -195,12 +193,8 @@ func Trim(fs FileSystem, path string) string {
 func IsAbs(fs FileSystem, path string) bool {
 	if fs != nil {
 		_, path = SplitVolume(fs, path)
-	} else {
-		if strings.HasPrefix(path, string(os.PathSeparator)) {
-			return true
-		}
 	}
-	return filepath.IsAbs(path)
+	return len(path) > 0 && isSlash(path[0])
 }
 
 // IsRoot determines whether a given path is a root path.
