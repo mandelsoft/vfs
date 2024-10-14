@@ -1,9 +1,10 @@
 module github.com/mandelsoft/vfs
 
-go 1.19
+go 1.22.5
 
 require (
 	github.com/mandelsoft/filepath v0.0.0-20240223090642-3e2777258aa3
+	github.com/modern-go/reflect2 v1.0.2
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	gopkg.in/yaml.v2 v2.3.0

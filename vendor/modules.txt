@@ -4,6 +4,9 @@ github.com/fsnotify/fsnotify
 # github.com/mandelsoft/filepath v0.0.0-20240223090642-3e2777258aa3
 ## explicit; go 1.19
 github.com/mandelsoft/filepath/pkg/filepath
+# github.com/modern-go/reflect2 v1.0.2
+## explicit; go 1.12
+github.com/modern-go/reflect2
 # github.com/nxadm/tail v1.4.4
 ## explicit; go 1.13
 github.com/nxadm/tail
