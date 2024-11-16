@@ -77,13 +77,21 @@ for example a `cwdfs.WorkingDirectoryFileSystem` or a
 The package `osfs` supports creating a temporary os filesystem based
 virtual filesystem residing in a temporary operating system directory.
 
+### Extended VFS interface
+
 Additionally, the interface `VFS` includes the standard filesystem operations
 and some implementation independent utility functions based on a virtual
 filesystem known from the `os`, `ìoutil` and `filepath` packages.
 The function `vfs.New(fs)` can be used to create such a wrapper for
 any virtual filesystem.
 
+### Support for `io/fs.FS`
+
 A virtual filesystem can be used as `io/fs.FS` or `io/fs.ReadDirFS`.
-Because of the Go typesystem and the stripped interface `io/fs.File`,
+Because of the Go type system and the stripped interface `io/fs.File`,
 this is not directly possible. But any virtual filesystem can be converted
 by a type converting wrapper function `vfs.AsIoFS(fs)`.
+
+### Relation to the Operating Filesystem
+
+The operating system filesystem can be accessed using `osfs.New` or the filesystem `osfs.OsFs`. If filesystems are composed using a layered or projection filesystem, the operating system filesystem can be combined with other implementations. To figure out, whether a virtual file is backed by an operating system file, the utility function `utils.OSFile` can be used to determine the underlying operating system file. It returns `nil` if the file has no underlying operating system file. 

@@ -35,8 +35,14 @@ type file struct {
 	files []os.FileInfo
 }
 
+var _ utils.BackingOSFile = (*file)(nil)
+
 func newFileHandle(name string, info *fileData, f vfs.File) vfs.File {
 	return &file{f, name, info, nil}
+}
+
+func (f *file) OSFile() *os.File {
+	return utils.OSFile(f.File)
 }
 
 func (f *file) Readdir(count int) ([]os.FileInfo, error) {

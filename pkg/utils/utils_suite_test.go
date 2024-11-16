@@ -19,26 +19,13 @@
 package utils
 
 import (
-	"os"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
-	"github.com/mandelsoft/vfs/pkg/vfs"
+	"testing"
 )
 
-type RenamedFile struct {
-	vfs.File
-	name string
-}
-
-var _ BackingOSFile = (*RenamedFile)(nil)
-
-func NewRenamedFile(name string, file vfs.File) vfs.File {
-	return &RenamedFile{file, name}
-}
-
-func (r *RenamedFile) Name() string {
-	return r.name
-}
-
-func (r *RenamedFile) OSFile() *os.File {
-	return OSFile(r.File)
+func TestNodes(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Utils Suite")
 }

@@ -31,6 +31,16 @@ import (
 
 var OsFs = &osFileSystem{}
 
+type osFile struct {
+	*os.File
+}
+
+var _ utils.BackingOSFile = (*osFile)(nil)
+
+func (f *osFile) OSFile() *os.File {
+	return f.File
+}
+
 // OsFsCheck should be implemented by forwarding wrappers
 // to check for an OS Filesystem implementation.
 type OsFsCheck interface {
@@ -95,7 +105,7 @@ func (osFileSystem) Create(name string) (vfs.File, error) {
 		f.Close()
 		return nil, err
 	}
-	return utils.NewRenamedFile(abs, f), e
+	return utils.NewRenamedFile(abs, &osFile{f}), e
 }
 
 func (osFileSystem) Mkdir(name string, perm os.FileMode) error {
@@ -120,7 +130,7 @@ func (osFileSystem) Open(name string) (vfs.File, error) {
 		f.Close()
 		return nil, err
 	}
-	return utils.NewRenamedFile(abs, f), e
+	return utils.NewRenamedFile(abs, &osFile{f}), e
 }
 
 func (osFileSystem) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
@@ -137,7 +147,7 @@ func (osFileSystem) OpenFile(name string, flag int, perm os.FileMode) (vfs.File,
 		f.Close()
 		return nil, err
 	}
-	return utils.NewRenamedFile(abs, f), e
+	return utils.NewRenamedFile(abs, &osFile{f}), e
 }
 
 func (osFileSystem) Remove(name string) error {

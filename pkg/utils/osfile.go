@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Mandelsoft. All rights reserved.
+ * Copyright 2024 Mandelsoft. All rights reserved.
  *  This file is licensed under the Apache Software License, v. 2 except as noted
  *  otherwise in the LICENSE file
  *
@@ -24,21 +24,19 @@ import (
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 
-type RenamedFile struct {
-	vfs.File
-	name string
+// BackingOSFile is an optional interface for a file
+// object providing access to an os.File used to back
+// the file.
+type BackingOSFile interface {
+	OSFile() *os.File
 }
 
-var _ BackingOSFile = (*RenamedFile)(nil)
-
-func NewRenamedFile(name string, file vfs.File) vfs.File {
-	return &RenamedFile{file, name}
-}
-
-func (r *RenamedFile) Name() string {
-	return r.name
-}
-
-func (r *RenamedFile) OSFile() *os.File {
-	return OSFile(r.File)
+// OSFile return the os.File used to back
+// the given virtual file. It returns nil,
+// if is not backed by an os.File.
+func OSFile(f vfs.File) *os.File {
+	if o, ok := f.(BackingOSFile); ok {
+		return o.OSFile()
+	}
+	return nil
 }
