@@ -24,10 +24,10 @@ import (
 
 	"github.com/mandelsoft/vfs/pkg/layerfs"
 	"github.com/mandelsoft/vfs/pkg/memoryfs"
+	"github.com/mandelsoft/vfs/pkg/osfs"
 	"github.com/mandelsoft/vfs/pkg/projectionfs"
 	"github.com/mandelsoft/vfs/pkg/utils"
 	"github.com/mandelsoft/vfs/pkg/vfs"
-	"github.com/mandelsoft/vfs/test/pkg/osfs"
 )
 
 var _ = Describe("readonly filesystem", func() {

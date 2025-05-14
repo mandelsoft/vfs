@@ -192,6 +192,7 @@ type VFS interface {
 	IsDir(path string) (bool, error)
 	IsFile(path string) (bool, error)
 
+	ReadDirEntries(path string) ([]DirEntry, error)
 	ReadDir(path string) ([]FileInfo, error)
 	ReadFile(path string) ([]byte, error)
 	WriteFile(path string, data []byte, mode FileMode) error

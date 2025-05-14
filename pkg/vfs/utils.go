@@ -576,3 +576,19 @@ func ReadDir(fs FileSystem, path string) ([]os.FileInfo, error) {
 	sort.Slice(list, func(i, j int) bool { return list[i].Name() < list[j].Name() })
 	return list, nil
 }
+
+// ReadDirEntries reads the directory named by path and returns
+// a list of directory entries sorted by filename.
+func ReadDirEntries(fs FileSystem, path string) ([]os.DirEntry, error) {
+	f, err := fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	list, err := f.ReadDir(-1)
+	f.Close()
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].Name() < list[j].Name() })
+	return list, nil
+}

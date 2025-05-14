@@ -129,6 +129,10 @@ func (fs *vfs) ReadDir(path string) ([]os.FileInfo, error) {
 	return ReadDir(fs, path)
 }
 
+func (fs *vfs) ReadDirEntries(path string) ([]os.DirEntry, error) {
+	return ReadDirEntries(fs, path)
+}
+
 func (fs *vfs) TempFile(dir, prefix string) (File, error) {
 	return TempFile(fs, dir, prefix)
 }
