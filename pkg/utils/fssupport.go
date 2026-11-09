@@ -178,10 +178,9 @@ func (m *FileSystemSupport) OpenFile(name string, flags int, perm os.FileMode) (
 	if flags&(os.O_RDONLY|os.O_WRONLY|os.O_RDWR) == os.O_RDONLY {
 		h.readOnly = true
 	} else {
-		if flags&os.O_APPEND != 0 {
-			_, err = h.Seek(0, os.SEEK_END)
-		}
-		if err == nil && flags&os.O_TRUNC > 0 && flags&(os.O_RDWR|os.O_WRONLY) > 0 {
+		// in append mode, every write is done at the end of the file.
+		h.append = flags&os.O_APPEND != 0
+		if flags&os.O_TRUNC > 0 && flags&(os.O_RDWR|os.O_WRONLY) > 0 {
 			err = h.Truncate(0)
 		}
 		if err != nil {

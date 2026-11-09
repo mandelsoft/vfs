@@ -49,8 +49,10 @@ type File struct {
 	readDirCount int64
 	closed       bool
 	readOnly     bool
-	fileData     FileData
-	name         string
+	// append mode: every Write is done at the end of the file.
+	append   bool
+	fileData FileData
+	name     string
 }
 
 var _ vfs.File = &File{}
@@ -145,34 +147,40 @@ func (f *File) Readdirnames(n int) (names []string, err error) {
 func (f *File) Read(buf []byte) (int, error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
-	n, err := f.read(buf, f.offset, io.ErrUnexpectedEOF)
+	n, err := f.read(buf, f.offset)
 	f.offset += int64(n)
 	return n, err
 }
 
-func (f *File) read(b []byte, offset int64, err error) (int, error) {
+// read reads data at the given offset. Reading at or after the end of the
+// file provides io.EOF (for a non-empty buffer).
+func (f *File) read(b []byte, offset int64) (int, error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
+	if offset < 0 {
+		return 0, ErrOutOfRange
+	}
 	data := f.fileData.Data()
-	if len(b) > 0 && int(offset) == len(data) {
-		return 0, io.EOF
+	if offset >= int64(len(data)) {
+		if len(b) > 0 {
+			return 0, io.EOF
+		}
+		return 0, nil
 	}
-	if int(f.offset) > len(data) {
-		return 0, err
-	}
-	n := len(b)
-	if len(data)-int(offset) < len(b) {
-		n = len(data) - int(offset)
-	}
-	copy(b, data[offset:offset+int64(n)])
-	return n, nil
+	return copy(b, data[offset:]), nil
 }
 
+// ReadAt reads data at the given offset. According to io.ReaderAt
+// it returns io.EOF, if less than len(b) bytes could be read.
 func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
-	return f.read(b, off, io.EOF)
+	n, err = f.read(b, off)
+	if err == nil && n < len(b) {
+		err = io.EOF
+	}
+	return n, err
 }
 
 func (f *File) Truncate(size int64) error {
@@ -206,30 +214,42 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	defer f.fileData.Unlock()
 	data := f.fileData.Data()
 	switch whence {
-	case 0:
-	case 1:
+	case io.SeekStart:
+	case io.SeekCurrent:
 		offset += f.offset
-	case 2:
+	case io.SeekEnd:
 		offset = int64(len(data)) + offset
+	default:
+		return 0, &os.PathError{Op: "seek", Path: f.name, Err: os.ErrInvalid}
 	}
-	if offset < 0 || offset >= int64(len(data)) {
+	// like for OS files, an offset after the end of the file is valid,
+	// a following write fills the gap with zeros.
+	if offset < 0 {
 		return 0, ErrOutOfRange
 	}
 	f.offset = offset
 	return f.offset, nil
 }
 
+// Write writes at the actual offset, or in append mode,
+// at the end of the file.
 func (f *File) Write(buf []byte) (int, error) {
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
-	n, err := f.write(buf, f.offset)
+	offset := f.offset
+	if f.append {
+		offset = int64(len(f.fileData.Data()))
+	}
+	n, err := f.write(buf, offset)
 	if err != nil {
 		return 0, err
 	}
-	f.offset += int64(n)
+	f.offset = offset + int64(n)
 	return int(n), nil
 }
 
+// write writes data at the given offset. If the offset is after the end
+// of the file, the gap is filled with zeros.
 func (f *File) write(buf []byte, offset int64) (int, error) {
 	if f.readOnly {
 		return 0, ErrReadOnly
@@ -237,18 +257,33 @@ func (f *File) write(buf []byte, offset int64) (int, error) {
 	if f.closed == true {
 		return 0, ErrFileClosed
 	}
+	if offset < 0 {
+		return 0, ErrOutOfRange
+	}
+	if len(buf) == 0 {
+		return 0, nil
+	}
 	data := f.fileData.Data()
+	if gap := offset - int64(len(data)); gap > 0 {
+		data = append(data, make([]byte, gap)...)
+	}
 	n := int64(len(buf))
 	add := offset + n - int64(len(data))
 	copy(data[offset:], buf)
 	if add > 0 {
-		f.fileData.SetData(append(data, buf[n-add:]...))
+		data = append(data, buf[n-add:]...)
 	}
+	f.fileData.SetData(data)
 	f.fileData.SetModTime(time.Now())
 	return int(n), nil
 }
 
+// WriteAt writes data at the given offset. Like for OS files,
+// it is not possible in append mode.
 func (f *File) WriteAt(buf []byte, off int64) (n int, err error) {
+	if f.append {
+		return 0, ErrWriteAtInAppendMode
+	}
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
 	return f.write(buf, off)
@@ -265,5 +300,7 @@ var (
 	ErrFileClosed = errors.New("file is closed")
 	ErrOutOfRange = errors.New("out of range")
 	ErrTooLarge   = errors.New("too large")
-	ErrNotEmpty   = vfs.ErrNotEmpty
+
+	ErrWriteAtInAppendMode = errors.New("invalid use of WriteAt on file opened with O_APPEND")
+	ErrNotEmpty            = vfs.ErrNotEmpty
 )
