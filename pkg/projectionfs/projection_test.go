@@ -21,13 +21,14 @@ package projectionfs_test
 import (
 	"os"
 
-	"github.com/mandelsoft/vfs/pkg/osfs"
-	"github.com/mandelsoft/vfs/pkg/projectionfs"
-	. "github.com/onsi/ginkgo"
+	. "github.com/mandelsoft/vfs/pkg/test"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/mandelsoft/vfs/pkg/osfs"
+	"github.com/mandelsoft/vfs/pkg/projectionfs"
+
 	"github.com/mandelsoft/vfs/pkg/memoryfs"
-	. "github.com/mandelsoft/vfs/pkg/test"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 

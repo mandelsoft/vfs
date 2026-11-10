@@ -21,11 +21,11 @@ package readonlyfs
 import (
 	"os"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/mandelsoft/vfs/pkg/test"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/mandelsoft/vfs/pkg/memoryfs"
-	. "github.com/mandelsoft/vfs/pkg/test"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
 

@@ -4,3 +4,4 @@
 /cmd/vfs/vfs
 .idea
 .sw[pq]
+/vendor
