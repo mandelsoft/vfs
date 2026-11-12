@@ -19,7 +19,6 @@
 package utils
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"io/fs"
@@ -52,13 +51,15 @@ type File struct {
 	// append mode: every Write is done at the end of the file.
 	append   bool
 	fileData FileData
-	name     string
+	// content is the access to the content of the file data.
+	content contentHandle
+	name    string
 }
 
 var _ vfs.File = &File{}
 
 func newFileHandle(name string, data FileData) *File {
-	return &File{name: name, fileData: data}
+	return &File{name: name, fileData: data, content: newContent(data)}
 }
 
 func (f *File) Open() error {
@@ -72,9 +73,9 @@ func (f *File) Open() error {
 
 func (f *File) Close() error {
 	f.fileData.Lock()
+	defer f.fileData.Unlock()
 	f.closed = true
-	f.fileData.Unlock()
-	return nil
+	return f.content.close()
 }
 
 func (f *File) Name() string {
@@ -161,14 +162,7 @@ func (f *File) read(b []byte, offset int64) (int, error) {
 	if offset < 0 {
 		return 0, ErrOutOfRange
 	}
-	data := f.fileData.Data()
-	if offset >= int64(len(data)) {
-		if len(b) > 0 {
-			return 0, io.EOF
-		}
-		return 0, nil
-	}
-	return copy(b, data[offset:]), nil
+	return f.content.read(b, offset)
 }
 
 // ReadAt reads data at the given offset. According to io.ReaderAt
@@ -195,15 +189,7 @@ func (f *File) Truncate(size int64) error {
 	}
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
-	data := f.fileData.Data()
-	if size > int64(len(data)) {
-		diff := size - int64(len(data))
-		f.fileData.SetData(append(data, bytes.Repeat([]byte{00}, int(diff))...))
-	} else {
-		f.fileData.SetData(data[0:size])
-	}
-	f.fileData.SetModTime(time.Now())
-	return nil
+	return f.content.truncate(size)
 }
 
 func (f *File) Seek(offset int64, whence int) (int64, error) {
@@ -212,13 +198,12 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 	}
 	f.fileData.Lock()
 	defer f.fileData.Unlock()
-	data := f.fileData.Data()
 	switch whence {
 	case io.SeekStart:
 	case io.SeekCurrent:
 		offset += f.offset
 	case io.SeekEnd:
-		offset = int64(len(data)) + offset
+		offset = f.content.size() + offset
 	default:
 		return 0, &os.PathError{Op: "seek", Path: f.name, Err: os.ErrInvalid}
 	}
@@ -238,7 +223,7 @@ func (f *File) Write(buf []byte) (int, error) {
 	defer f.fileData.Unlock()
 	offset := f.offset
 	if f.append {
-		offset = int64(len(f.fileData.Data()))
+		offset = f.content.size()
 	}
 	n, err := f.write(buf, offset)
 	if err != nil {
@@ -248,8 +233,7 @@ func (f *File) Write(buf []byte) (int, error) {
 	return int(n), nil
 }
 
-// write writes data at the given offset. If the offset is after the end
-// of the file, the gap is filled with zeros.
+// write writes data at the given offset (see contentHandle).
 func (f *File) write(buf []byte, offset int64) (int, error) {
 	if f.readOnly {
 		return 0, ErrReadOnly
@@ -263,19 +247,7 @@ func (f *File) write(buf []byte, offset int64) (int, error) {
 	if len(buf) == 0 {
 		return 0, nil
 	}
-	data := f.fileData.Data()
-	if gap := offset - int64(len(data)); gap > 0 {
-		data = append(data, make([]byte, gap)...)
-	}
-	n := int64(len(buf))
-	add := offset + n - int64(len(data))
-	copy(data[offset:], buf)
-	if add > 0 {
-		data = append(data, buf[n-add:]...)
-	}
-	f.fileData.SetData(data)
-	f.fileData.SetModTime(time.Now())
-	return int(n), nil
+	return f.content.write(buf, offset)
 }
 
 // WriteAt writes data at the given offset. Like for OS files,

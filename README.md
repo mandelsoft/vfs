@@ -24,6 +24,7 @@ implementations that simulate a uniform filesystem for all its users.
 - package `layerfs` provides a filesystem layer on top of a base filesystem.
   The layer can be implemented by any other virtual filesystem, for example
   a memory filesystem (see [godoc](https://pkg.go.dev/github.com/mandelsoft/vfs/pkg/layerfs)).
+  Without a base filesystem the layer itself is the effective filesystem.
 - package `yamlfs` provides a filesystem based on the structure and content of a
   yaml document (see [godoc](https://pkg.go.dev/github.com/mandelsoft/vfs/pkg/yamlfs)).
   The document can even be changed by filesystem operations.
@@ -95,3 +96,24 @@ by a type converting wrapper function `vfs.AsIoFS(fs)`.
 ### Relation to the Operating Filesystem
 
 The operating system filesystem can be accessed using `osfs.New` or the filesystem `osfs.OsFs`. If filesystems are composed using a layered or projection filesystem, the operating system filesystem can be combined with other implementations. To figure out, whether a virtual file is backed by an operating system file, the utility function `utils.OSFile` can be used to determine the underlying operating system file. It returns `nil` if the file has no underlying operating system file. 
+
+### Implementing own Filesystems
+
+The package `utils` supports implementing own filesystems based on a tree
+of `utils.FileData` objects (`utils.NewFSSupport`), as used by `memoryfs`
+and `yamlfs`. It provides the complete filesystem interface including the
+evaluation of symbolic links.
+
+By default, the content of a file is kept in memory (`FileData.Data` and
+`FileData.SetData`). File data implementing the optional interface
+`utils.StreamData` provides its content by streams instead (`Size`,
+`Reader` and `Writer`), for example for large content read on demand from
+another storage. Such files can be read with arbitrary offsets (a reader is
+read sequentially, positioning backwards opens a new reader, if the content
+can be read again, readers implementing `io.Seeker` or `io.ReaderAt` are
+used for direct access).
+Writing is only supported as sequential replacement of the complete
+content: after truncating the file (for example by opening it with
+`O_TRUNC`) or for empty content, the content is written from offset 0
+without gaps and is complete when the file is closed. Other write operations
+fail with an error matching `errors.ErrUnsupported`.

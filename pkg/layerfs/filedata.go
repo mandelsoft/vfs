@@ -20,6 +20,7 @@ package layerfs
 
 import (
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/mandelsoft/vfs/pkg/utils"
@@ -30,10 +31,15 @@ const opaque_del = ".wh..wh..opq"
 const del_prefix = ".wh."
 
 type fileData struct {
-	fs   vfs.FileSystem
+	fs vfs.FileSystem
+	// base is the file system of the lower layers for entries of the layer,
+	// it is nil for entries of the base.
 	base vfs.FileSystem
-	path string
-	fi   os.FileInfo
+	// hidden indicates that the base is hidden for the entry and its sub
+	// tree by an opaque directory of the layer.
+	hidden bool
+	path   string
+	fi     os.FileInfo
 }
 
 func asFileData(data utils.FileDataDirAccess) *fileData {
@@ -69,7 +75,8 @@ func (f *fileData) GetEntry(name string) (utils.FileDataDirAccess, error) {
 
 	del := del_prefix + name
 	fpath := vfs.Join(f.fs, f.path, name)
-	forward := f.base != nil
+	// an opaque directory hides the base for its complete sub tree
+	forward := f.base != nil && !f.hidden
 	for _, n := range names {
 		switch n {
 		case name:
@@ -77,7 +84,10 @@ func (f *fileData) GetEntry(name string) (utils.FileDataDirAccess, error) {
 			if err != nil {
 				return nil, err
 			}
-			return newFileData(f.fs, f.base, fpath, fi), nil
+			d := newFileData(f.fs, f.base, fpath, fi)
+			// the opaque marker may follow the entry in the listing
+			d.hidden = f.hidden || slices.Contains(names, opaque_del)
+			return d, nil
 		case del:
 			return nil, vfs.ErrNotExist
 		case opaque_del:

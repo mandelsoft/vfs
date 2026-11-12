@@ -70,5 +70,5 @@ func (f *fileInfo) Size() int64 {
 	if f.fileData.IsDir() {
 		return int64(42)
 	}
-	return int64(len(f.fileData.Data()))
+	return newContent(f.fileData).size()
 }

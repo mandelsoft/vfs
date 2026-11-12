@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/modern-go/reflect2"
+
 	"github.com/mandelsoft/vfs/pkg/utils"
 	"github.com/mandelsoft/vfs/pkg/vfs"
 )
@@ -38,7 +40,13 @@ type LayerFileSystem struct {
 
 var _ vfs.FileSystemCleanup = (*LayerFileSystem)(nil)
 
+// New provides a file system with the layer on top of the base. Without a
+// base (nil, also a typed nil) there are no lower layers, the layer is the
+// effective file system and is returned itself.
 func New(layer, base vfs.FileSystem) vfs.FileSystem {
+	if reflect2.IsNil(base) {
+		return layer
+	}
 	fs := &LayerFileSystem{layer: layer, base: base}
 	return fs
 }
@@ -276,6 +284,14 @@ func markerFor(path string) string {
 	return path[:i+1] + del_prefix + path[i+1:]
 }
 
+// visible reports whether the effective view provides an entry for the
+// given path. After removing an entry from the layer, a whiteout marker is
+// only required to delete it, if it is still visible from below.
+func (l *LayerFileSystem) visible(path string) bool {
+	_, err := l.Lstat(path)
+	return err == nil
+}
+
 func (l *LayerFileSystem) Remove(name string) error {
 	d, _, f, n, err := l.createInfo(name, false)
 	if err != nil {
@@ -328,6 +344,10 @@ func (l *LayerFileSystem) Remove(name string) error {
 		if err != nil {
 			return err
 		}
+		// the entry was only provided by the layer
+		if !l.visible(f.path) {
+			return nil
+		}
 	}
 	err = vfs.Touch(l.layer, markerFor(f.path), os.ModePerm)
 	if err != nil {
@@ -351,9 +371,9 @@ func (l *LayerFileSystem) RemoveAll(name string) error {
 			return err
 		}
 
-		_, err := f.base.Lstat(f.path)
-		if err == nil || !vfs.IsErrNotExist(err) {
-			return err
+		// the entry was only provided by the layer
+		if !l.visible(f.path) {
+			return nil
 		}
 	}
 

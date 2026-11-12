@@ -156,4 +156,101 @@ var _ = Describe("layer filesystem", func() {
 			})
 		})
 	})
+
+	Context("whiteouts", func() {
+		var base, layer vfs.FileSystem
+		var fs vfs.FileSystem
+
+		BeforeEach(func() {
+			base, layer = memoryfs.New(), memoryfs.New()
+			Expect(vfs.WriteFile(base, "/both", []byte("base"), 0o644)).To(Succeed())
+			Expect(base.MkdirAll("/dir/sub", 0o755)).To(Succeed())
+			Expect(vfs.WriteFile(base, "/dir/sub/x", []byte("x"), 0o644)).To(Succeed())
+			fs = New(layer, base)
+			Expect(vfs.WriteFile(fs, "/both", []byte("layer"), 0o644)).To(Succeed())
+			Expect(vfs.WriteFile(fs, "/only", []byte("only"), 0o644)).To(Succeed())
+		})
+
+		It("marks only deletions of entries of the base by Remove", func() {
+			Expect(fs.Remove("/both")).To(Succeed())
+			Expect(fs.Remove("/only")).To(Succeed())
+			Expect(vfs.Exists(fs, "/both")).To(BeFalse())
+			Expect(vfs.Exists(fs, "/only")).To(BeFalse())
+			ExpectFolders(layer, "/", []string{".wh.both"}, nil)
+		})
+
+		It("marks only deletions of entries of the base by RemoveAll", func() {
+			Expect(fs.RemoveAll("/both")).To(Succeed())
+			Expect(fs.RemoveAll("/only")).To(Succeed())
+			// the entry of the base must not appear again
+			Expect(vfs.Exists(fs, "/both")).To(BeFalse())
+			Expect(vfs.Exists(fs, "/only")).To(BeFalse())
+			ExpectFolders(layer, "/", []string{".wh.both"}, nil)
+		})
+
+		It("does not mark entries hidden by opaque directories", func() {
+			Expect(fs.RemoveAll("/dir")).To(Succeed())
+			Expect(fs.MkdirAll("/dir", 0o755)).To(Succeed())
+			Expect(vfs.WriteFile(fs, "/dir/sub", []byte("file"), 0o644)).To(Succeed())
+			Expect(fs.Remove("/dir/sub")).To(Succeed())
+			Expect(vfs.Exists(fs, "/dir/sub")).To(BeFalse())
+			ExpectFolders(layer, "/dir", []string{".wh..wh..opq"}, nil)
+		})
+	})
+
+	It("provides the layer itself without base", func() {
+		layer := memoryfs.New()
+		Expect(New(layer, nil)).To(BeIdenticalTo(layer))
+		var typed *LayerFileSystem
+		Expect(New(layer, typed)).To(BeIdenticalTo(layer))
+	})
+
+	Context("opaque directories of OCI layers", func() {
+		// the layer has only an opaque marker for the top directory, like
+		// OCI layers, not for its sub directories
+		var base, layer vfs.FileSystem
+		var fs vfs.FileSystem
+
+		BeforeEach(func() {
+			base, layer = memoryfs.New(), memoryfs.New()
+			Expect(base.MkdirAll("/dir/sub", 0o755)).To(Succeed())
+			Expect(vfs.WriteFile(base, "/dir/sub/y", []byte("base y"), 0o644)).To(Succeed())
+			Expect(vfs.WriteFile(base, "/dir/z", []byte("base z"), 0o644)).To(Succeed())
+			Expect(layer.MkdirAll("/dir/sub", 0o755)).To(Succeed())
+			Expect(vfs.WriteFile(layer, "/dir/.wh..wh..opq", nil, 0o644)).To(Succeed())
+			Expect(vfs.WriteFile(layer, "/dir/sub/x", []byte("layer x"), 0o644)).To(Succeed())
+			fs = New(layer, base)
+		})
+
+		It("hides the complete sub tree of the base", func() {
+			Expect(vfs.Exists(fs, "/dir/z")).To(BeFalse())
+			Expect(vfs.Exists(fs, "/dir/sub/y")).To(BeFalse())
+			Expect(vfs.ReadFile(fs, "/dir/sub/x")).To(Equal([]byte("layer x")))
+			ExpectFolders(fs, "/dir", []string{"sub"}, nil)
+			ExpectFolders(fs, "/dir/sub", []string{"x"}, nil)
+		})
+
+		It("hides the sub tree of entries listed before the opaque marker", func() {
+			// "+" is sorted before "." of the marker
+			Expect(base.MkdirAll("/dir/+sub", 0o755)).To(Succeed())
+			Expect(vfs.WriteFile(base, "/dir/+sub/y", []byte("base y"), 0o644)).To(Succeed())
+			Expect(layer.MkdirAll("/dir/+sub", 0o755)).To(Succeed())
+			Expect(vfs.Exists(fs, "/dir/+sub/y")).To(BeFalse())
+			ExpectFolders(fs, "/dir/+sub", []string{}, nil)
+		})
+
+		It("deletes entries of the sub tree without whiteouts", func() {
+			Expect(fs.Remove("/dir/sub/x")).To(Succeed())
+			Expect(vfs.Exists(fs, "/dir/sub/x")).To(BeFalse())
+			Expect(vfs.Exists(fs, "/dir/sub/y")).To(BeFalse())
+			ExpectFolders(layer, "/dir/sub", []string{}, nil)
+		})
+
+		It("creates entries in the sub tree without the content of the base", func() {
+			Expect(vfs.WriteFile(fs, "/dir/sub/y", []byte("new y"), 0o644)).To(Succeed())
+			Expect(vfs.ReadFile(fs, "/dir/sub/y")).To(Equal([]byte("new y")))
+			ExpectFolders(fs, "/dir/sub", []string{"x", "y"}, nil)
+			Expect(vfs.ReadFile(base, "/dir/sub/y")).To(Equal([]byte("base y")))
+		})
+	})
 })

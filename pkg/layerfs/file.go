@@ -56,7 +56,8 @@ func (f *file) Readdir(count int) ([]os.FileInfo, error) {
 		files := []os.FileInfo{}
 		deleted := map[string]struct{}{}
 		found := map[string]struct{}{}
-		forward := true
+		// below an opaque directory only the content of the layer is used
+		forward := f.info.base != nil && !f.info.hidden
 		for _, e := range list {
 			n := e.Name()
 			if n == opaque_del {
